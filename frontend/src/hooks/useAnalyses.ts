@@ -10,9 +10,9 @@ interface Analysis {
   status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
   sourceType: 'CLOUDFORMATION' | 'TERRAFORM' | 'CDK' | 'LIVE_ACCOUNT';
   sourceLocation: string;
-  results?: any;
-  scores?: any;
-  recommendations?: any;
+  results?: Record<string, unknown>;
+  scores?: Record<string, number>;
+  recommendations?: Array<Record<string, unknown>>;
   executedBy: string;
   executedAt: string;
   completedAt?: string;
@@ -38,7 +38,7 @@ export function useAnalyses(projectId?: string) {
     try {
       setLoading(true);
       const response = await analysisQueries.listAnalyses(projectId);
-      setAnalyses((response.data as any[]) || []);
+      setAnalyses((response.data as Analysis[]) || []);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load analyses');
@@ -62,11 +62,11 @@ export function useAnalyses(projectId?: string) {
         projectId,
         tenantId: user.tenantId
       });
-      
+
       if (response.data) {
-        setAnalyses(prev => [...prev, response.data as any]);
+        setAnalyses(prev => [...prev, response.data as Analysis]);
       }
-      
+
       return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create analysis');
@@ -89,7 +89,7 @@ export function useAnalyses(projectId?: string) {
   };
 
   const getLatestAnalysis = () => {
-    return analyses.sort((a, b) => 
+    return analyses.sort((a, b) =>
       new Date(b.executedAt).getTime() - new Date(a.executedAt).getTime()
     )[0];
   };

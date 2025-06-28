@@ -32,7 +32,7 @@ export function useProjects() {
     try {
       setLoading(true);
       const response = await projectQueries.listProjects(user.tenantId);
-      setProjects((response.data as any[]) || []);
+      setProjects((response.data as Project[]) || []);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load projects');
@@ -54,11 +54,11 @@ export function useProjects() {
         ...input,
         tenantId: user.tenantId
       });
-      
+
       if (response.data) {
-        setProjects(prev => [...prev, response.data as any]);
+        setProjects(prev => [...prev, response.data as Project]);
       }
-      
+
       return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create project');
@@ -75,13 +75,13 @@ export function useProjects() {
   }>) => {
     try {
       const response = await projectQueries.updateProject(id, input);
-      
+
       if (response.data) {
-        setProjects(prev => 
-          prev.map(p => p.id === id ? { ...p, ...(response.data as any) } : p)
+        setProjects(prev =>
+          prev.map(p => p.id === id ? { ...p, ...(response.data as Partial<Project>) } : p)
         );
       }
-      
+
       return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update project');

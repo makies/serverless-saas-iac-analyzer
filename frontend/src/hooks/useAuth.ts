@@ -22,7 +22,7 @@ export function useAuth() {
       setLoading(true);
       const currentUser = await getCurrentUser();
       const session = await fetchAuthSession();
-      
+
       // Extract custom attributes from JWT token
       const idToken = session.tokens?.idToken;
       const tenantId = idToken?.payload['custom:tenantId'] as string;
