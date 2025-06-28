@@ -14,7 +14,7 @@ function App() {
       <TopNavigation
         identity={{
           href: '/',
-          title: 'Cloud Bestpractice Analyzer',
+          title: 'Cloud Best Practice Analyzer',
         }}
         utilities={[
           {
@@ -38,7 +38,7 @@ function App() {
         navigationHide
         content={
           <div style={{ padding: '20px' }}>
-            <Header variant="h1">Welcome to Cloud Bestpractice Analyzer</Header>
+            <Header variant="h1">Welcome to Cloud Best Practice Analyzer</Header>
             <p>Hello, {user?.username}! Your application is now running.</p>
           </div>
         }

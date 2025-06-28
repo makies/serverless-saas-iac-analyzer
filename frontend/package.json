@@ -1,7 +1,7 @@
 {
-  "name": "cloud-bestpractice-analyzer-frontend",
+  "name": "cloud-best-practice-analyzer-frontend",
   "version": "1.0.0",
-  "description": "Cloud Bestpractice Analyzer - Multi-tenant SaaS for AWS infrastructure analysis and best practice recommendations",
+  "description": "Cloud Best Practice Analyzer - Multi-tenant SaaS for AWS infrastructure analysis and best practice recommendations",
   "private": true,
   "scripts": {
     "dev": "vite",

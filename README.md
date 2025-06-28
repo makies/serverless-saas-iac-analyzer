@@ -1,22 +1,23 @@
-# Serverless SaaS IaC Analyzer
+# Cloud Best Practice Analyzer
 
-AWS Amplify Gen 2を使用したマルチテナント対応のServerless SaaS IaC Analyzerです。
+AWS Amplify Gen 2 を使用したマルチテナント対応の Cloud Best Practice Analyzer です。
 
 ## 🏗️ アーキテクチャ
 
 - **Frontend**: React + AWS Amplify + Cloudscape Design System
-- **Backend**: AWS AppSync GraphQL + Lambda (Node.js 20.x TypeScript)
+- **Backend**: AWS AppSync GraphQL + Lambda (Node.js 22.x TypeScript)
 - **Database**: DynamoDB (Pool Model)
 - **AI Engine**: Amazon Bedrock (Claude 4 Sonnet)
 - **Authentication**: AWS Cognito User Pools
-- **Package Manager**: Bun
+- **Package Manager**: bun
 
 ## 🚀 セットアップ
 
 ### 前提条件
+
 - Node.js 20.x
 - Bun 1.0+
-- AWS CLI設定済み
+- AWS CLI 設定済み
 
 ### インストール
 
@@ -53,18 +54,21 @@ project-analyzer/
 ## 🔧 技術スタック
 
 ### GraphQL API (AppSync)
+
 - マルチテナント対応データモデル
 - ロールベースアクセス制御
 - リアルタイムサブスクリプション
 
 ### Lambda Functions
-- `analysisHandler`: IaC分析処理（Bedrock統合）
-- `reportGenerator`: レポート生成（PDF/Excel/JSON）
+
+- `analysisHandler`: クラウドインフラ分析処理（Bedrock 統合）
+- `reportGenerator`: ベストプラクティスレポート生成（PDF/Excel/JSON）
 
 ### 認証・認可
+
 - Cognito User Pools
 - カスタム属性（tenantId, role）
-- 6つのユーザーロール
+- 6 つのユーザーロール
   - SystemAdmin
   - ClientAdmin
   - ProjectManager
@@ -74,10 +78,10 @@ project-analyzer/
 
 ## 🎯 主要機能
 
-1. **IaC分析**: CloudFormation/Terraform/CDK対応
-2. **Well-Architected分析**: 6つの柱による評価
+1. **クラウドインフラ分析**: CloudFormation/Terraform/CDK 対応
+2. **ベストプラクティス評価**: AWS Well-Architected Framework 準拠
 3. **ライブスキャン**: AWS アカウント直接分析
-4. **レポート生成**: PDF/Excel/JSON出力
+4. **レポート生成**: PDF/Excel/JSON 出力
 5. **マルチテナント**: 完全なデータ分離
 6. **ロールベースアクセス**: プロジェクト別権限制御
 
@@ -106,23 +110,23 @@ bun run deploy
 ## 🛡️ セキュリティ
 
 - **テナント分離**: DynamoDB Row Level Security
-- **認証**: Cognito MFA対応
+- **認証**: Cognito MFA 対応
 - **認可**: GraphQL フィールドレベル制御
-- **暗号化**: S3/DynamoDB暗号化
-- **監査**: CloudTrail統合
+- **暗号化**: S3/DynamoDB 暗号化
+- **監査**: CloudTrail 統合
 
 ## 📊 制約（Basic Tier）
 
-- 月100回分析
-- 10MBファイル制限
-- 90日データ保存
-- プラグイン5個同時実行
-- プラグイン実行時間15分
+- 月 100 回分析
+- 10MB ファイル制限
+- 90 日データ保存
+- プラグイン 5 個同時実行
+- プラグイン実行時間 15 分
 
 ## 🔄 REST API → GraphQL 移行完了
 
-✅ Amplify Gen 2 TypeScript定義
+✅ Amplify Gen 2 TypeScript 定義
 ✅ AppSync GraphQL API
 ✅ Lambda リゾルバー統合
 ✅ マルチテナント認証・認可
-✅ フロントエンド型安全GraphQLクライアント
+✅ フロントエンド型安全 GraphQL クライアント
