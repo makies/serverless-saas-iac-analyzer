@@ -14,7 +14,7 @@ function App() {
       <TopNavigation
         identity={{
           href: '/',
-          title: 'Serverless SaaS IaC Analyzer',
+          title: 'Cloud Bestpractice Analyzer',
         }}
         utilities={[
           {
@@ -38,9 +38,7 @@ function App() {
         navigationHide
         content={
           <div style={{ padding: '20px' }}>
-            <Header variant="h1">
-              Welcome to Serverless SaaS IaC Analyzer
-            </Header>
+            <Header variant="h1">Welcome to Cloud Bestpractice Analyzer</Header>
             <p>Hello, {user?.username}! Your application is now running.</p>
           </div>
         }
