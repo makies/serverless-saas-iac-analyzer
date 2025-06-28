@@ -1,7 +1,7 @@
+import { Authenticator } from '@aws-amplify/ui-react';
+import { Amplify } from 'aws-amplify';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { Amplify } from 'aws-amplify';
-import { Authenticator } from '@aws-amplify/ui-react';
 import App from './App.tsx';
 import amplifyConfig from './amplify-config';
 import '@aws-amplify/ui-react/styles.css';

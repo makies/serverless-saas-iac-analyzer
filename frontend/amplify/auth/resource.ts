@@ -4,7 +4,14 @@ export const auth = defineAuth({
   loginWith: {
     email: true,
   },
-  groups: ['SystemAdmin', 'ClientAdmin', 'ProjectManager', 'Analyst', 'Viewer', 'ClientEngineer'],
+  groups: [
+    'SystemAdmin',
+    'ClientAdmin',
+    'ProjectManager',
+    'Analyst',
+    'Viewer',
+    'ClientEngineer',
+  ],
   userAttributes: {
     'custom:tenantId': {
       dataType: 'String',

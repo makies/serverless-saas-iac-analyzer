@@ -5,8 +5,12 @@
   "scripts": {
     "dev": "vite",
     "build": "bun run type-check && vite build",
-    "lint": "eslint src amplify --ext ts,tsx",
-    "lint:fix": "eslint src amplify --ext ts,tsx --fix",
+    "lint": "biome lint src amplify",
+    "lint:fix": "biome lint --write src amplify",
+    "format": "biome format --write src amplify *.json",
+    "format:check": "biome format src amplify *.json",
+    "check": "biome check src amplify *.json",
+    "check:fix": "biome check --write src amplify *.json",
     "type-check": "tsc --noEmit",
     "preview": "vite preview",
     "test": "bun test",
@@ -26,6 +30,7 @@
   "devDependencies": {
     "@aws-amplify/backend": "^1.16.1",
     "@aws-amplify/backend-cli": "^1.8.0",
+    "@biomejs/biome": "^2.0.6",
     "@types/node": "^22.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",

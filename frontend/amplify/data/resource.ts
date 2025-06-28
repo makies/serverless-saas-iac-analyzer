@@ -1,4 +1,4 @@
-import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { a, type ClientSchema, defineData } from '@aws-amplify/backend';
 
 const schema = a.schema({
   Tenant: a
@@ -12,16 +12,21 @@ const schema = a.schema({
       projects: a.hasMany('Project', 'tenantId'),
       users: a.hasMany('User', 'tenantId'),
     })
-    .authorization(allow => [
-      allow.groups(['SystemAdmin']),
-    ]),
+    .authorization((allow) => [allow.groups(['SystemAdmin'])]),
 
   User: a
     .model({
       id: a.id().required(),
       email: a.string().required(),
       tenantId: a.id().required(),
-      role: a.enum(['SYSTEM_ADMIN', 'CLIENT_ADMIN', 'PROJECT_MANAGER', 'ANALYST', 'VIEWER', 'CLIENT_ENGINEER']),
+      role: a.enum([
+        'SYSTEM_ADMIN',
+        'CLIENT_ADMIN',
+        'PROJECT_MANAGER',
+        'ANALYST',
+        'VIEWER',
+        'CLIENT_ENGINEER',
+      ]),
       firstName: a.string().required(),
       lastName: a.string().required(),
       status: a.enum(['ACTIVE', 'INACTIVE', 'PENDING']),
@@ -31,7 +36,7 @@ const schema = a.schema({
       tenant: a.belongsTo('Tenant', 'tenantId'),
       projectAssignments: a.hasMany('ProjectAssignment', 'userId'),
     })
-    .authorization(allow => [
+    .authorization((allow) => [
       allow.owner().to(['read', 'update']),
       allow.groups(['SystemAdmin', 'ClientAdmin']),
     ]),
@@ -51,7 +56,7 @@ const schema = a.schema({
       assignments: a.hasMany('ProjectAssignment', 'projectId'),
       analyses: a.hasMany('Analysis', 'projectId'),
     })
-    .authorization(allow => [
+    .authorization((allow) => [
       allow.groups(['SystemAdmin']),
       allow.ownerDefinedIn('tenantId'),
     ]),
@@ -68,7 +73,7 @@ const schema = a.schema({
       project: a.belongsTo('Project', 'projectId'),
       user: a.belongsTo('User', 'userId'),
     })
-    .authorization(allow => [
+    .authorization((allow) => [
       allow.groups(['SystemAdmin', 'ClientAdmin', 'ProjectManager']),
       allow.ownerDefinedIn('tenantId').to(['read']),
     ]),
@@ -78,9 +83,25 @@ const schema = a.schema({
       id: a.id().required(),
       projectId: a.id().required(),
       tenantId: a.id().required(),
-      type: a.enum(['IAC_ANALYSIS', 'LIVE_SCAN', 'SECURITY_REVIEW', 'COMPLIANCE_CHECK']),
-      status: a.enum(['PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']),
-      sourceType: a.enum(['CLOUDFORMATION', 'TERRAFORM', 'CDK', 'LIVE_ACCOUNT']),
+      type: a.enum([
+        'IAC_ANALYSIS',
+        'LIVE_SCAN',
+        'SECURITY_REVIEW',
+        'COMPLIANCE_CHECK',
+      ]),
+      status: a.enum([
+        'PENDING',
+        'RUNNING',
+        'COMPLETED',
+        'FAILED',
+        'CANCELLED',
+      ]),
+      sourceType: a.enum([
+        'CLOUDFORMATION',
+        'TERRAFORM',
+        'CDK',
+        'LIVE_ACCOUNT',
+      ]),
       sourceLocation: a.string().required(),
       results: a.json(),
       scores: a.json(),
@@ -93,7 +114,7 @@ const schema = a.schema({
       project: a.belongsTo('Project', 'projectId'),
       reports: a.hasMany('Report', 'analysisId'),
     })
-    .authorization(allow => [
+    .authorization((allow) => [
       allow.groups(['SystemAdmin']),
       allow.ownerDefinedIn('tenantId'),
     ]),
@@ -114,11 +135,10 @@ const schema = a.schema({
       updatedAt: a.datetime(),
       analysis: a.belongsTo('Analysis', 'analysisId'),
     })
-    .authorization(allow => [
+    .authorization((allow) => [
       allow.groups(['SystemAdmin']),
       allow.ownerDefinedIn('tenantId'),
     ]),
-
 });
 
 export type Schema = ClientSchema<typeof schema>;

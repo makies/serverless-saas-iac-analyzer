@@ -1,5 +1,9 @@
-import { useState, useEffect } from 'react';
-import { getCurrentUser, fetchAuthSession, AuthUser } from 'aws-amplify/auth';
+import {
+  type AuthUser,
+  fetchAuthSession,
+  getCurrentUser,
+} from 'aws-amplify/auth';
+import { useEffect, useState } from 'react';
 
 interface UserProfile extends AuthUser {
   tenantId?: string;
@@ -35,7 +39,7 @@ export function useAuth() {
         tenantId,
         role,
         firstName,
-        lastName
+        lastName,
       });
       setError(null);
     } catch (err) {
@@ -50,16 +54,18 @@ export function useAuth() {
     if (!user?.role) return false;
 
     const roleHierarchy = {
-      'SYSTEM_ADMIN': 5,
-      'CLIENT_ADMIN': 4,
-      'PROJECT_MANAGER': 3,
-      'ANALYST': 2,
-      'VIEWER': 1,
-      'CLIENT_ENGINEER': 1
+      SYSTEM_ADMIN: 5,
+      CLIENT_ADMIN: 4,
+      PROJECT_MANAGER: 3,
+      ANALYST: 2,
+      VIEWER: 1,
+      CLIENT_ENGINEER: 1,
     };
 
-    const userRoleLevel = roleHierarchy[user.role as keyof typeof roleHierarchy] || 0;
-    const requiredRoleLevel = roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0;
+    const userRoleLevel =
+      roleHierarchy[user.role as keyof typeof roleHierarchy] || 0;
+    const requiredRoleLevel =
+      roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0;
 
     return userRoleLevel >= requiredRoleLevel;
   };
@@ -79,6 +85,6 @@ export function useAuth() {
     hasPermission,
     isTenantAdmin,
     isSystemAdmin,
-    refreshAuth: checkAuthState
+    refreshAuth: checkAuthState,
   };
 }

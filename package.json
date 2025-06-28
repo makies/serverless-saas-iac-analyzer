@@ -5,7 +5,8 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "bun test",
-    "lint": "eslint . --ext .ts",
+    "lint": "npm run lint --prefix frontend && npm run lint --prefix infrastructure",
+    "lint:fix": "npm run lint:fix --prefix frontend && npm run lint:fix --prefix infrastructure",
     "type-check": "tsc --noEmit",
     "cdk": "cdk",
     "clean": "rm -rf lib/*.js lib/*.d.ts"

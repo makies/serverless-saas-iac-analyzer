@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { analysisQueries } from '../graphql/queries';
 import { useAuth } from './useAuth';
 
@@ -60,16 +60,18 @@ export function useAnalyses(projectId?: string) {
       const response = await analysisQueries.createAnalysis({
         ...input,
         projectId,
-        tenantId: user.tenantId
+        tenantId: user.tenantId,
       });
 
       if (response.data) {
-        setAnalyses(prev => [...prev, response.data as Analysis]);
+        setAnalyses((prev) => [...prev, response.data as Analysis]);
       }
 
       return response;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create analysis');
+      setError(
+        err instanceof Error ? err.message : 'Failed to create analysis'
+      );
       throw err;
     }
   };
@@ -85,12 +87,13 @@ export function useAnalyses(projectId?: string) {
   };
 
   const getAnalysisByStatus = (status: Analysis['status']) => {
-    return analyses.filter(analysis => analysis.status === status);
+    return analyses.filter((analysis) => analysis.status === status);
   };
 
   const getLatestAnalysis = () => {
-    return analyses.sort((a, b) =>
-      new Date(b.executedAt).getTime() - new Date(a.executedAt).getTime()
+    return analyses.sort(
+      (a, b) =>
+        new Date(b.executedAt).getTime() - new Date(a.executedAt).getTime()
     )[0];
   };
 
@@ -102,6 +105,6 @@ export function useAnalyses(projectId?: string) {
     getAnalysis,
     getAnalysisByStatus,
     getLatestAnalysis,
-    refreshAnalyses: loadAnalyses
+    refreshAnalyses: loadAnalyses,
   };
 }

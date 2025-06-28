@@ -33,9 +33,13 @@ module.exports = {
 
     // フォーマット
     'no-trailing-spaces': 'error',
-    'no-multiple-empty-lines': ['error', { max: 1, maxEOF: 0 }],
+    'no-multiple-empty-lines': ['error', { max: 1, maxEOF: 0, maxBOF: 0 }],
     'eol-last': ['error', 'always'],
     'semi': ['error', 'always'],
+    'indent': ['error', 2, { SwitchCase: 1 }],
+    'object-curly-spacing': ['error', 'always'],
+    'array-bracket-spacing': ['error', 'never'],
+    'comma-dangle': ['error', 'never'],
 
     // React Hooks
     'react-hooks/rules-of-hooks': 'error',

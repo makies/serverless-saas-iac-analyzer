@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { projectQueries } from '../graphql/queries';
 import { useAuth } from './useAuth';
 
@@ -52,11 +52,11 @@ export function useProjects() {
     try {
       const response = await projectQueries.createProject({
         ...input,
-        tenantId: user.tenantId
+        tenantId: user.tenantId,
       });
 
       if (response.data) {
-        setProjects(prev => [...prev, response.data as Project]);
+        setProjects((prev) => [...prev, response.data as Project]);
       }
 
       return response;
@@ -66,19 +66,24 @@ export function useProjects() {
     }
   };
 
-  const updateProject = async (id: string, input: Partial<{
-    name: string;
-    description: string;
-    status: 'ACTIVE' | 'ARCHIVED' | 'SUSPENDED';
-    awsAccountId: string;
-    region: string;
-  }>) => {
+  const updateProject = async (
+    id: string,
+    input: Partial<{
+      name: string;
+      description: string;
+      status: 'ACTIVE' | 'ARCHIVED' | 'SUSPENDED';
+      awsAccountId: string;
+      region: string;
+    }>
+  ) => {
     try {
       const response = await projectQueries.updateProject(id, input);
 
       if (response.data) {
-        setProjects(prev =>
-          prev.map(p => p.id === id ? { ...p, ...(response.data as Partial<Project>) } : p)
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id === id ? { ...p, ...(response.data as Partial<Project>) } : p
+          )
         );
       }
 
@@ -92,7 +97,7 @@ export function useProjects() {
   const deleteProject = async (id: string) => {
     try {
       await projectQueries.deleteProject(id);
-      setProjects(prev => prev.filter(p => p.id !== id));
+      setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete project');
       throw err;
@@ -106,6 +111,6 @@ export function useProjects() {
     createProject,
     updateProject,
     deleteProject,
-    refreshProjects: loadProjects
+    refreshProjects: loadProjects,
   };
 }

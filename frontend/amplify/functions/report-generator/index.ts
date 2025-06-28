@@ -5,7 +5,7 @@ export const handler = async (event: any) => {
     statusCode: 200,
     body: JSON.stringify({
       message: 'Report generator function executed successfully',
-      event
-    })
+      event,
+    }),
   };
 };
