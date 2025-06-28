@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "bun run type-check && vite build",
-    "lint": "eslint src --ext ts,tsx",
-    "lint:fix": "eslint src --ext ts,tsx --fix",
+    "lint": "eslint src amplify --ext ts,tsx",
+    "lint:fix": "eslint src amplify --ext ts,tsx --fix",
     "type-check": "tsc --noEmit",
     "preview": "vite preview",
     "test": "bun test",

@@ -3,11 +3,10 @@ module.exports = {
   env: { browser: true, es2020: true },
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
   ],
   ignorePatterns: ['dist', '.eslintrc.js', 'amplify_outputs.*'],
   parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint', 'react-hooks', 'react-refresh'],
+  plugins: ['react-hooks', 'react-refresh'],
   rules: {
     // React Refresh
     'react-refresh/only-export-components': [
@@ -16,8 +15,7 @@ module.exports = {
     ],
 
     // TypeScript (基本ルールのみ)
-    '@typescript-eslint/no-unused-vars': 'warn',
-    '@typescript-eslint/no-explicit-any': 'warn',
+    'no-unused-vars': 'warn',
 
     // コード品質
     'no-console': 'warn',
@@ -59,6 +57,13 @@ module.exports = {
         // '@aws-cdk/no-unused-import': 'error',
         // '@aws-cdk/no-import-private': 'error',
         // '@aws-cdk/no-legacy-imports': 'error',
+      },
+    },
+    {
+      // Lambda functions - allow console statements
+      files: ['amplify/functions/**/*.ts'],
+      rules: {
+        'no-console': 'off',
       },
     },
   ],

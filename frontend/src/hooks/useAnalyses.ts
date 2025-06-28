@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { analysisQueries } from '../graphql/queries';
 import { useAuth } from './useAuth';
 
@@ -26,13 +26,7 @@ export function useAnalyses(projectId?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (projectId) {
-      loadAnalyses();
-    }
-  }, [projectId]);
-
-  const loadAnalyses = async () => {
+  const loadAnalyses = useCallback(async () => {
     if (!projectId) return;
 
     try {
@@ -45,7 +39,13 @@ export function useAnalyses(projectId?: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) {
+      loadAnalyses();
+    }
+  }, [projectId, loadAnalyses]);
 
   const createAnalysis = async (input: {
     type: 'IAC_ANALYSIS' | 'LIVE_SCAN' | 'SECURITY_REVIEW' | 'COMPLIANCE_CHECK';

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { projectQueries } from '../graphql/queries';
 import { useAuth } from './useAuth';
 
@@ -20,13 +20,7 @@ export function useProjects() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user?.tenantId) {
-      loadProjects();
-    }
-  }, [user?.tenantId]);
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     if (!user?.tenantId) return;
 
     try {
@@ -39,7 +33,13 @@ export function useProjects() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.tenantId]);
+
+  useEffect(() => {
+    if (user?.tenantId) {
+      loadProjects();
+    }
+  }, [user?.tenantId, loadProjects]);
 
   const createProject = async (input: {
     name: string;

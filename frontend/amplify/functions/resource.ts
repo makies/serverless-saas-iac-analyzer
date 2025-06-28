@@ -6,7 +6,7 @@ export const analysisFunction = defineFunction({
   environment: {
     BEDROCK_MODEL_ID: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
   },
-}); 
+});
 
 export const reportFunction = defineFunction({
   name: 'reportGenerator',

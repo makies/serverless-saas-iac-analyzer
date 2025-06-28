@@ -1,9 +1,9 @@
-import React from 'react'
-import { AppLayout, Header, TopNavigation } from '@cloudscape-design/components'
-import { useAuthenticator } from '@aws-amplify/ui-react'
+import React from 'react';
+import { AppLayout, Header, TopNavigation } from '@cloudscape-design/components';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 
 function App() {
-  const { user, signOut } = useAuthenticator((context) => [context.user])
+  const { user, signOut } = useAuthenticator((context) => [context.user]);
 
   return (
     <>
@@ -23,7 +23,7 @@ function App() {
             ],
             onItemClick: ({ detail }) => {
               if (detail.id === 'signout') {
-                signOut()
+                signOut();
               }
             }
           }
@@ -42,7 +42,7 @@ function App() {
         }
       />
     </>
-  )
+  );
 }
 
-export default App
+export default App;

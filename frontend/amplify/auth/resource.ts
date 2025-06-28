@@ -11,7 +11,7 @@ export const auth = defineAuth({
       mutable: true,
     },
     'custom:role': {
-      dataType: 'String',  
+      dataType: 'String',
       mutable: true,
     },
     'custom:firstName': {
