@@ -15,7 +15,7 @@ AWS Amplify Gen 2 を使用したマルチテナント対応の Cloud Best Pract
 
 ### 前提条件
 
-- Node.js 20.x
+- Node.js 22.x
 - Bun 1.0+
 - AWS CLI 設定済み
 
@@ -46,8 +46,6 @@ project-analyzer/
 │   │   ├── data/              # GraphQLスキーマ
 │   │   └── functions/         # Lambda関数
 │   └── src/                   # フロントエンドソース
-├── backend/                   # 従来のLambda（移行予定）
-├── infrastructure/            # CDK（Amplifyに統合予定）
 └── docs/                      # ドキュメント
 ```
 
