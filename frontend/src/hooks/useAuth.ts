@@ -19,7 +19,7 @@ export function useAuth() {
 
   useEffect(() => {
     checkAuthState();
-  }, []);
+  }, [checkAuthState]);
 
   const checkAuthState = async () => {
     try {
@@ -31,8 +31,8 @@ export function useAuth() {
       const idToken = session.tokens?.idToken;
       const tenantId = idToken?.payload['custom:tenantId'] as string;
       const role = idToken?.payload['custom:role'] as string;
-      const firstName = idToken?.payload['given_name'] as string;
-      const lastName = idToken?.payload['family_name'] as string;
+      const firstName = idToken?.payload.given_name as string;
+      const lastName = idToken?.payload.family_name as string;
 
       setUser({
         ...currentUser,

@@ -1,49 +1,56 @@
-import { useAuthenticator } from '@aws-amplify/ui-react';
-import {
-  AppLayout,
-  Header,
-  TopNavigation,
-} from '@cloudscape-design/components';
-import React from 'react';
+import { ConfigProvider, App as AntApp } from 'antd';
+import locale from 'antd/locale/ja_JP';
+import 'dayjs/locale/ja';
+import dayjs from 'dayjs';
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import Projects from './pages/Projects';
+import NewAnalysis from './pages/NewAnalysis';
+import AnalysisResults from './pages/AnalysisResults';
+
+// 日本語設定
+dayjs.locale('ja');
 
 function App() {
-  const { user, signOut } = useAuthenticator((context) => [context.user]);
-
   return (
-    <>
-      <TopNavigation
-        identity={{
-          href: '/',
-          title: 'Cloud Best Practice Analyzer',
-        }}
-        utilities={[
-          {
-            type: 'menu-dropdown',
-            text: user?.username || 'User',
-            items: [
-              { id: 'profile', text: 'Profile' },
-              { id: 'preferences', text: 'Preferences' },
-              { id: 'signout', text: 'Sign out' },
-            ],
-            onItemClick: ({ detail }) => {
-              if (detail.id === 'signout') {
-                signOut();
-              }
-            },
+    <ConfigProvider
+      locale={locale}
+      theme={{
+        token: {
+          colorPrimary: '#1890ff',
+          borderRadius: 6,
+          colorBgLayout: '#f5f5f5',
+        },
+        components: {
+          Layout: {
+            headerBg: '#ffffff',
+            siderBg: '#ffffff',
           },
-        ]}
-      />
-      <AppLayout
-        headerSelector="#header"
-        navigationHide
-        content={
-          <div style={{ padding: '20px' }}>
-            <Header variant="h1">Welcome to Cloud Best Practice Analyzer</Header>
-            <p>Hello, {user?.username}! Your application is now running.</p>
-          </div>
-        }
-      />
-    </>
+          Menu: {
+            itemBg: 'transparent',
+            subMenuItemBg: 'transparent',
+          },
+        },
+      }}
+    >
+      <AntApp>
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/projects/:projectId" element={<Projects />} />
+              <Route path="/analysis/new" element={<NewAnalysis />} />
+              <Route
+                path="/projects/:projectId/analysis/new"
+                element={<NewAnalysis />}
+              />
+              <Route path="/analysis/:analysisId" element={<AnalysisResults />} />
+            </Routes>
+          </Layout>
+        </Router>
+      </AntApp>
+    </ConfigProvider>
   );
 }
 

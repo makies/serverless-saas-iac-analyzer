@@ -20,13 +20,15 @@
     "deploy": "ampx pipeline-deploy --branch main"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.0.0",
     "@aws-amplify/ui-react": "^6.0.0",
-    "@cloudscape-design/components": "^3.0.0",
-    "@cloudscape-design/design-tokens": "^3.0.0",
-    "@cloudscape-design/global-styles": "^1.0.44",
+    "@types/react-router-dom": "^5.3.3",
+    "antd": "^5.26.2",
     "aws-amplify": "^6.0.0",
+    "dayjs": "^1.11.13",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.6.3"
   },
   "devDependencies": {
     "@aws-amplify/backend": "^1.16.1",
