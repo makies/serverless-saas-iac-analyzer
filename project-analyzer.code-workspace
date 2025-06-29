@@ -6,7 +6,9 @@
 	],
 	"settings": {
 		"cSpell.words": [
-			"eslintcache"
+			"eslintcache",
+			"OPFS",
+			"VARCHAR"
 		]
 	}
 }
