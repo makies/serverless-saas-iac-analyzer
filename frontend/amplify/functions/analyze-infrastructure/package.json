@@ -1,0 +1,28 @@
+{
+  "name": "analyze-infrastructure",
+  "version": "1.0.0",
+  "description": "Lambda function for infrastructure analysis",
+  "main": "handler.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@aws-lambda-powertools/logger": "^2.8.0",
+    "@aws-lambda-powertools/metrics": "^2.8.0",
+    "@aws-lambda-powertools/tracer": "^2.8.0",
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.600.0",
+    "@aws-sdk/client-cloudformation": "^3.600.0",
+    "@aws-sdk/client-sts": "^3.600.0",
+    "@aws-sdk/util-dynamodb": "^3.600.0",
+    "@middy/core": "^5.4.6"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  }
+}

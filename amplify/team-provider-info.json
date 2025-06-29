@@ -1,0 +1,30 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-cloudbpa-dev-authRole",
+      "UnauthRoleName": "amplify-cloudbpa-dev-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::ACCOUNT_ID:role/amplify-cloudbpa-dev-authRole",
+      "UnauthRoleArn": "arn:aws:iam::ACCOUNT_ID:role/amplify-cloudbpa-dev-unauthRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-cloudbpa-dev-deployment",
+      "UnauthRolePolicy": "amplify-cloudbpa-dev-unauthRole-policy",
+      "StackName": "amplify-cloudbpa-dev",
+      "StackId": "arn:aws:cloudformation:us-east-1:ACCOUNT_ID:stack/amplify-cloudbpa-dev/STACK_ID",
+      "AmplifyAppId": "APP_ID"
+    },
+    "categories": {
+      "auth": {
+        "cloudbpaauth": {}
+      },
+      "api": {
+        "cloudbpaapi": {}
+      },
+      "storage": {
+        "cloudbpastorage": {}
+      },
+      "ai": {
+        "cloudbpaai": {}
+      }
+    }
+  }
+}

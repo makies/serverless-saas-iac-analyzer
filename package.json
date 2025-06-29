@@ -1,26 +1,43 @@
 {
   "name": "cloud-best-practice-analyzer",
   "version": "1.0.0",
-  "description": "Cloud Best Practice Analyzer - Multi-tenant SaaS for AWS infrastructure analysis",
+  "description": "Cloud Best Practice Analyzer - Multi-tenant SaaS with Amplify Gen 2 + CDK hybrid architecture",
   "private": true,
   "workspaces": [
-    "frontend"
+    "frontend",
+    "cdk-infrastructure"
   ],
   "scripts": {
-    "install:all": "bun install && bun install --cwd frontend",
-    "build": "bun run build --cwd frontend",
-    "lint": "bun run lint --cwd frontend",
-    "lint:fix": "bun run lint:fix --cwd frontend",
-    "format": "bun run format --cwd frontend",
-    "check": "bun run check --cwd frontend",
-    "type-check": "bun run type-check --cwd frontend",
-    "test": "bun test --cwd frontend",
-    "dev": "bun run dev --cwd frontend",
-    "sandbox": "bun run sandbox --cwd frontend",
-    "deploy": "bun run deploy --cwd frontend"
+    "install:all": "npm install && npm install --prefix frontend && npm install --prefix cdk-infrastructure",
+    "build": "npm run build --prefix frontend",
+    "lint": "npm run lint --prefix frontend",
+    "lint:fix": "npm run lint:fix --prefix frontend",
+    "format": "npm run format --prefix frontend",
+    "check": "npm run check --prefix frontend",
+    "type-check": "npm run type-check --prefix frontend",
+    "test": "npm run test --prefix frontend",
+    "dev": "npm run dev --prefix frontend",
+    "amplify:sandbox": "npx ampx sandbox",
+    "amplify:deploy": "npx ampx deploy --branch main",
+    "cdk:deploy": "cd cdk-infrastructure && npm run deploy",
+    "deploy:all": "npm run amplify:deploy && npm run cdk:deploy"
   },
   "devDependencies": {
+    "@aws-amplify/backend": "^1.2.1",
+    "@aws-amplify/backend-cli": "^1.2.6",
     "@biomejs/biome": "^2.0.6",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "aws-cdk-lib": "^2.162.1",
+    "constructs": "^10.0.0"
+  },
+  "dependencies": {
+    "@aws-amplify/backend-ai": "^1.1.1"
+  },
+  "overrides": {
+    "@aws-cdk/aws-appsync-alpha": "2.59.0-alpha.0",
+    "graphql": "^16.8.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

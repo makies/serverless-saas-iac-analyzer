@@ -1,0 +1,632 @@
+# AWS AppSync GraphQL Schema for Cloud Best Practice Analyzer
+
+# Custom scalars
+scalar AWSDateTime
+scalar AWSEmail
+scalar AWSJSON
+scalar AWSPhone
+scalar AWSURL
+
+# Directives
+directive @aws_auth(cognito_groups: [String!]!) on FIELD_DEFINITION | OBJECT
+directive @aws_subscribe(mutations: [String!]!) on FIELD_DEFINITION
+
+# Tenant Management
+type Tenant {
+  id: ID!
+  name: String!
+  status: TenantStatus!
+  subscription: TenantSubscription!
+  adminEmail: AWSEmail!
+  settings: TenantSettings
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  
+  # Relationships
+  projects: [Project!]!
+  users: [User!]!
+}
+
+type TenantSubscription {
+  tier: String! # "BASIC"
+  limits: TenantLimits!
+}
+
+type TenantLimits {
+  monthlyAnalyses: Int!
+  maxFileSize: Int!
+  retentionDays: Int!
+  maxConcurrentAnalyses: Int!
+}
+
+type TenantSettings {
+  allowClientAccess: Boolean!
+  defaultAnalysisType: AnalysisType!
+  notificationSettings: NotificationSettings
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+# Project Management
+type Project {
+  id: ID!
+  tenantId: ID!
+  name: String!
+  description: String
+  status: ProjectStatus!
+  memberIds: [String]!
+  settings: ProjectSettings
+  metrics: ProjectMetrics
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  createdBy: String!
+  
+  # Relationships
+  tenant: Tenant!
+  analyses: [Analysis!]!
+  reports: [Report!]!
+}
+
+type ProjectSettings {
+  allowClientAccess: Boolean!
+  defaultAnalysisType: AnalysisType!
+  autoDeleteAnalyses: Boolean!
+  retentionDays: Int
+}
+
+type ProjectMetrics {
+  totalAnalyses: Int!
+  completedAnalyses: Int!
+  avgScore: Float
+  lastAnalysisAt: AWSDateTime
+}
+
+enum ProjectStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+# Analysis Management
+type Analysis {
+  id: ID!
+  tenantId: ID!
+  projectId: ID!
+  name: String!
+  type: AnalysisType!
+  status: AnalysisStatus!
+  inputFiles: [S3Object]
+  awsConfig: AWSConfig
+  resultSummary: AnalysisResultSummary
+  executionId: String
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  completedAt: AWSDateTime
+  createdBy: String!
+  
+  # Relationships
+  tenant: Tenant!
+  project: Project!
+  findings: [Finding!]!
+  reports: [Report!]!
+}
+
+enum AnalysisType {
+  CLOUDFORMATION
+  TERRAFORM
+  CDK
+  LIVE_SCAN
+}
+
+enum AnalysisStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+type AnalysisResultSummary {
+  overallScore: Int!
+  pillars: [PillarScore!]!
+  criticalFindings: Int!
+  highFindings: Int!
+  mediumFindings: Int!
+  lowFindings: Int!
+  totalFindings: Int!
+}
+
+type PillarScore {
+  pillar: WellArchitectedPillar!
+  score: Int!
+  findings: Int!
+}
+
+# Findings
+type Finding {
+  id: ID!
+  analysisId: ID!
+  tenantId: ID!
+  title: String!
+  description: String!
+  severity: FindingSeverity!
+  pillar: WellArchitectedPillar!
+  resource: String
+  line: Int
+  recommendation: String!
+  category: String
+  ruleId: String
+  createdAt: AWSDateTime!
+  
+  # Relationships
+  analysis: Analysis!
+}
+
+enum FindingSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum WellArchitectedPillar {
+  OPERATIONAL_EXCELLENCE
+  SECURITY
+  RELIABILITY
+  PERFORMANCE_EFFICIENCY
+  COST_OPTIMIZATION
+  SUSTAINABILITY
+}
+
+# Reports
+type Report {
+  id: ID!
+  tenantId: ID!
+  projectId: ID!
+  analysisId: ID
+  name: String!
+  type: ReportType!
+  format: ReportFormat!
+  status: ReportStatus!
+  s3Location: S3Object
+  generatedBy: String!
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  
+  # Relationships
+  tenant: Tenant!
+  project: Project!
+  analysis: Analysis
+}
+
+enum ReportType {
+  ANALYSIS_SUMMARY
+  DETAILED_FINDINGS
+  EXECUTIVE_SUMMARY
+  COMPLIANCE_REPORT
+}
+
+enum ReportFormat {
+  PDF
+  EXCEL
+  JSON
+  HTML
+}
+
+enum ReportStatus {
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+# User Management
+type User {
+  id: ID!
+  tenantId: ID!
+  cognitoId: String!
+  email: AWSEmail!
+  firstName: String!
+  lastName: String!
+  role: UserRole!
+  status: UserStatus!
+  projectIds: [String]!
+  preferences: UserPreferences
+  lastLoginAt: AWSDateTime
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  
+  # Relationships
+  tenant: Tenant!
+}
+
+enum UserRole {
+  SYSTEM_ADMIN
+  CLIENT_ADMIN
+  PROJECT_MANAGER
+  ANALYST
+  VIEWER
+  CLIENT_ENGINEER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING_INVITATION
+}
+
+type UserPreferences {
+  language: String!
+  timezone: String!
+  emailNotifications: Boolean!
+  theme: String!
+}
+
+type UserProfile {
+  id: ID!
+  email: AWSEmail!
+  firstName: String!
+  lastName: String!
+  role: UserRole!
+  tenantId: ID!
+  projectIds: [String]!
+  preferences: UserPreferences
+  lastLoginAt: AWSDateTime
+}
+
+# Common Types
+type S3Object {
+  bucket: String!
+  key: String!
+  size: Int!
+  contentType: String
+}
+
+type AWSConfig {
+  region: String!
+  accountId: String!
+  roleArn: String
+}
+
+type NotificationSettings {
+  analysisComplete: Boolean!
+  quotaWarning: Boolean!
+  systemAlerts: Boolean!
+}
+
+# Dashboard and Metrics
+type DashboardMetrics {
+  totalProjects: Int!
+  totalAnalyses: Int!
+  completedAnalyses: Int!
+  avgScore: Float!
+  recentAnalyses: [Analysis!]!
+  pillarScores: [PillarScore!]!
+}
+
+# Queries
+type Query {
+  # Tenant queries
+  getTenant(id: ID!): Tenant
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins"])
+  
+  listTenants(limit: Int, nextToken: String): TenantConnection
+    @aws_auth(cognito_groups: ["SystemAdmins"])
+  
+  # Project queries
+  getProject(id: ID!): Project
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers", "ClientEngineers"])
+  
+  listProjects(limit: Int, nextToken: String): ProjectConnection
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins"])
+  
+  listProjectsByTenant(tenantId: ID!, limit: Int, nextToken: String): ProjectConnection
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers"])
+  
+  # Analysis queries
+  getAnalysis(id: ID!): Analysis
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers", "ClientEngineers"])
+  
+  listAnalyses(limit: Int, nextToken: String): AnalysisConnection
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins"])
+  
+  listAnalysesByProject(projectId: ID!, limit: Int, nextToken: String): AnalysisConnection
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers", "ClientEngineers"])
+  
+  listAnalysesByTenant(tenantId: ID!, limit: Int, nextToken: String): AnalysisConnection
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins"])
+  
+  # Report queries
+  getReport(id: ID!): Report
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers", "ClientEngineers"])
+  
+  listReports(limit: Int, nextToken: String): ReportConnection
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins"])
+  
+  listReportsByProject(projectId: ID!, limit: Int, nextToken: String): ReportConnection
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers", "ClientEngineers"])
+  
+  # User queries
+  getUser(id: ID!): User
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins"])
+  
+  listUsers(limit: Int, nextToken: String): UserConnection
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins"])
+  
+  getUserProfile: UserProfile
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers", "ClientEngineers"])
+  
+  # Finding queries
+  getAnalysisFindings(analysisId: ID!, limit: Int, nextToken: String): FindingConnection
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers", "ClientEngineers"])
+  
+  # Dashboard queries
+  getDashboardMetrics(tenantId: ID!, projectId: ID): DashboardMetrics
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers"])
+  
+  getProjectMetrics(projectId: ID!): ProjectMetrics
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers"])
+}
+
+# Mutations
+type Mutation {
+  # Project mutations
+  createProject(input: CreateProjectInput!): Project
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins"])
+  
+  updateProject(input: UpdateProjectInput!): Project
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers"])
+  
+  deleteProject(input: DeleteProjectInput!): Project
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins"])
+  
+  # Analysis mutations
+  createAnalysis(input: CreateAnalysisInput!): Analysis
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts"])
+  
+  updateAnalysis(input: UpdateAnalysisInput!): Analysis
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts"])
+  
+  deleteAnalysis(input: DeleteAnalysisInput!): Analysis
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts"])
+  
+  startAnalysis(input: StartAnalysisInput!): Analysis
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts"])
+  
+  # Report mutations
+  generateReport(input: GenerateReportInput!): Report
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts"])
+  
+  deleteReport(input: DeleteReportInput!): Report
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers"])
+  
+  # User mutations
+  updateUserProfile(input: UpdateUserProfileInput!): UserProfile
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers", "ClientEngineers"])
+  
+  inviteUser(input: InviteUserInput!): InviteUserResult
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins"])
+  
+  # Admin mutations
+  createTenant(input: CreateTenantInput!): Tenant
+    @aws_auth(cognito_groups: ["SystemAdmins"])
+  
+  updateTenant(input: UpdateTenantInput!): Tenant
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins"])
+  
+  suspendTenant(input: SuspendTenantInput!): Tenant
+    @aws_auth(cognito_groups: ["SystemAdmins"])
+}
+
+# Subscriptions
+type Subscription {
+  # Analysis status updates
+  onAnalysisStatusChanged(tenantId: ID!, projectId: ID): Analysis
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers"])
+    @aws_subscribe(mutations: ["updateAnalysis"])
+  
+  # Analysis completion notifications
+  onAnalysisCompleted(tenantId: ID!): Analysis
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers"])
+    @aws_subscribe(mutations: ["updateAnalysis"])
+  
+  # Report generation notifications
+  onReportGenerated(tenantId: ID!, projectId: ID): Report
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers"])
+    @aws_subscribe(mutations: ["generateReport"])
+  
+  # Project updates
+  onProjectUpdated(tenantId: ID!): Project
+    @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers"])
+    @aws_subscribe(mutations: ["updateProject"])
+}
+
+# Input Types
+input CreateProjectInput {
+  tenantId: ID!
+  name: String!
+  description: String
+  memberIds: [String]!
+  settings: ProjectSettingsInput
+}
+
+input UpdateProjectInput {
+  id: ID!
+  name: String
+  description: String
+  status: ProjectStatus
+  memberIds: [String]
+  settings: ProjectSettingsInput
+}
+
+input DeleteProjectInput {
+  id: ID!
+}
+
+input ProjectSettingsInput {
+  allowClientAccess: Boolean
+  defaultAnalysisType: AnalysisType
+  autoDeleteAnalyses: Boolean
+  retentionDays: Int
+}
+
+input CreateAnalysisInput {
+  tenantId: ID!
+  projectId: ID!
+  name: String!
+  type: AnalysisType!
+  inputFiles: [S3ObjectInput]
+  awsConfig: AWSConfigInput
+}
+
+input UpdateAnalysisInput {
+  id: ID!
+  name: String
+  status: AnalysisStatus
+  resultSummary: AnalysisResultSummaryInput
+  executionId: String
+  completedAt: AWSDateTime
+}
+
+input DeleteAnalysisInput {
+  id: ID!
+}
+
+input StartAnalysisInput {
+  id: ID!
+}
+
+input S3ObjectInput {
+  bucket: String!
+  key: String!
+  size: Int!
+  contentType: String
+}
+
+input AWSConfigInput {
+  region: String!
+  accountId: String!
+  roleArn: String
+}
+
+input AnalysisResultSummaryInput {
+  overallScore: Int!
+  pillars: [PillarScoreInput!]!
+  criticalFindings: Int!
+  highFindings: Int!
+  mediumFindings: Int!
+  lowFindings: Int!
+  totalFindings: Int!
+}
+
+input PillarScoreInput {
+  pillar: WellArchitectedPillar!
+  score: Int!
+  findings: Int!
+}
+
+input GenerateReportInput {
+  tenantId: ID!
+  projectId: ID!
+  analysisId: ID
+  name: String!
+  type: ReportType!
+  format: ReportFormat!
+}
+
+input DeleteReportInput {
+  id: ID!
+}
+
+input UpdateUserProfileInput {
+  firstName: String
+  lastName: String
+  preferences: UserPreferencesInput
+}
+
+input UserPreferencesInput {
+  language: String
+  timezone: String
+  emailNotifications: Boolean
+  theme: String
+}
+
+input InviteUserInput {
+  tenantId: ID!
+  email: AWSEmail!
+  firstName: String!
+  lastName: String!
+  role: UserRole!
+  projectIds: [String]!
+}
+
+input CreateTenantInput {
+  name: String!
+  adminEmail: AWSEmail!
+  settings: TenantSettingsInput
+}
+
+input UpdateTenantInput {
+  id: ID!
+  name: String
+  settings: TenantSettingsInput
+}
+
+input SuspendTenantInput {
+  id: ID!
+  reason: String!
+}
+
+input TenantSettingsInput {
+  allowClientAccess: Boolean
+  defaultAnalysisType: AnalysisType
+  notificationSettings: NotificationSettingsInput
+}
+
+input NotificationSettingsInput {
+  analysisComplete: Boolean
+  quotaWarning: Boolean
+  systemAlerts: Boolean
+}
+
+# Response Types
+type InviteUserResult {
+  success: Boolean!
+  userId: ID
+  message: String!
+}
+
+# Connection Types (for pagination)
+type TenantConnection {
+  items: [Tenant]!
+  nextToken: String
+}
+
+type ProjectConnection {
+  items: [Project]!
+  nextToken: String
+}
+
+type AnalysisConnection {
+  items: [Analysis]!
+  nextToken: String
+}
+
+type ReportConnection {
+  items: [Report]!
+  nextToken: String
+}
+
+type UserConnection {
+  items: [User]!
+  nextToken: String
+}
+
+type FindingConnection {
+  items: [Finding]!
+  nextToken: String
+}

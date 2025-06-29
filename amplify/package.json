@@ -1,0 +1,14 @@
+{
+  "name": "cloud-bpa-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@aws-amplify/backend": "^1.2.1",
+    "aws-cdk-lib": "^2.162.1",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
