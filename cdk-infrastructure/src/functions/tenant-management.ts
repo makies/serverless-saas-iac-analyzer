@@ -5,7 +5,7 @@ import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge
 import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminDeleteUserCommand, AdminAddUserToGroupCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
-import { Metrics, MetricUnits } from '@aws-lambda-powertools/metrics';
+import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
 
 // PowerTools setup
 const logger = new Logger({ serviceName: 'tenant-management' });
@@ -56,7 +56,10 @@ export const handler: APIGatewayProxyHandler = async (
   const subsegment = segment?.addNewSubsegment('tenant-management');
 
   try {
-    logger.addContext(event.requestContext);
+    logger.appendKeys({
+      requestId: event.requestContext.requestId,
+      stage: event.requestContext.stage,
+    });
     logger.info('Processing tenant management request', {
       httpMethod: event.httpMethod,
       resourcePath: event.resource,
@@ -98,16 +101,16 @@ export const handler: APIGatewayProxyHandler = async (
         };
     }
 
-    metrics.addMetric('RequestSuccess', MetricUnits.Count, 1);
+    metrics.addMetric('RequestSuccess', MetricUnit.Count, 1);
     return result;
 
   } catch (error) {
     logger.error('Tenant management request failed', {
-      error: error.message,
-      stack: error.stack,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
     });
 
-    metrics.addMetric('RequestError', MetricUnits.Count, 1);
+    metrics.addMetric('RequestError', MetricUnit.Count, 1);
 
     return {
       statusCode: 500,
@@ -117,7 +120,7 @@ export const handler: APIGatewayProxyHandler = async (
       },
       body: JSON.stringify({
         error: 'Internal Server Error',
-        message: error.message,
+        message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
 
@@ -276,7 +279,7 @@ async function createTenant(event: APIGatewayProxyEvent): Promise<APIGatewayProx
     logger.warn('Failed to create Cognito user', {
       tenantId,
       adminEmail,
-      error: cognitoError.message,
+      error: cognitoError instanceof Error ? cognitoError.message : 'Unknown Cognito error',
     });
     // Continue with tenant creation even if Cognito user creation fails
   }
@@ -451,7 +454,7 @@ async function deleteTenant(tenantId: string): Promise<APIGatewayProxyResult> {
   } catch (cognitoError) {
     logger.warn('Failed to delete Cognito user', {
       tenantId,
-      error: cognitoError.message,
+      error: cognitoError instanceof Error ? cognitoError.message : 'Unknown Cognito error',
     });
   }
 

@@ -25,6 +25,7 @@ export interface AppSyncStackProps {
 export class AppSyncStack extends Construct {
   public readonly api: appsync.GraphqlApi;
   public readonly resolverFunctions: Record<string, lambda.Function>;
+  private readonly dataSources: Record<string, appsync.BaseDataSource>;
 
   constructor(scope: Construct, id: string, props: AppSyncStackProps) {
     super(scope, id);
@@ -32,6 +33,7 @@ export class AppSyncStack extends Construct {
     const { config, userPool, tables, buckets } = props;
 
     this.resolverFunctions = {};
+    this.dataSources = {};
 
     // GraphQL API
     this.api = new appsync.GraphqlApi(this, 'GraphQLAPI', {
@@ -164,6 +166,12 @@ export class AppSyncStack extends Construct {
         FINDINGS_TABLE: tables.Findings.tableName,
         REPORTS_TABLE: tables.Reports.tableName,
         USERS_TABLE: tables.Users.tableName,
+        // Multi-Framework System Tables
+        FRAMEWORK_REGISTRY_TABLE: tables.FrameworkRegistry.tableName,
+        RULE_DEFINITIONS_TABLE: tables.RuleDefinitions.tableName,
+        TENANT_FRAMEWORK_CONFIG_TABLE: tables.TenantFrameworkConfig.tableName,
+        TENANT_ANALYTICS_TABLE: tables.TenantAnalytics.tableName,
+        GLOBAL_ANALYTICS_TABLE: tables.GlobalAnalytics.tableName,
         // S3 Bucket Names
         APPLICATION_DATA_BUCKET: buckets.ApplicationData.bucketName,
         TEMPLATES_BUCKET: buckets.Templates.bucketName,
@@ -277,6 +285,51 @@ export class AppSyncStack extends Construct {
         functionName: `${commonProps.environment.SERVICE_NAME}-getDashboardMetrics-${commonProps.environment.ENVIRONMENT}`,
       }
     );
+
+    // Framework Management queries
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.LIST_FRAMEWORKS] = new nodejs.NodejsFunction(
+      this,
+      'ListFrameworksFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/query/framework/listFrameworks.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-listFrameworks-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
+
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.GET_FRAMEWORK] = new nodejs.NodejsFunction(
+      this,
+      'GetFrameworkFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/query/framework/getFramework.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-getFramework-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
+
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.LIST_FRAMEWORK_RULES] = new nodejs.NodejsFunction(
+      this,
+      'ListFrameworkRulesFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/query/framework/listFrameworkRules.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-listFrameworkRules-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
+
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.GET_TENANT_FRAMEWORK_CONFIG] = new nodejs.NodejsFunction(
+      this,
+      'GetTenantFrameworkConfigFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/query/framework/getTenantFrameworkConfig.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-getTenantFrameworkConfig-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
   }
 
   private createMutationResolvers(commonProps: any) {
@@ -337,6 +390,40 @@ export class AppSyncStack extends Construct {
         functionName: `${commonProps.environment.SERVICE_NAME}-generateReport-${commonProps.environment.ENVIRONMENT}`,
       }
     );
+
+    // Framework Management mutations
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.CREATE_FRAMEWORK_SET] = new nodejs.NodejsFunction(
+      this,
+      'CreateFrameworkSetFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/mutation/framework/createFrameworkSet.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-createFrameworkSet-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
+
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.UPDATE_FRAMEWORK_SET] = new nodejs.NodejsFunction(
+      this,
+      'UpdateFrameworkSetFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/mutation/framework/updateFrameworkSet.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-updateFrameworkSet-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
+
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.DELETE_FRAMEWORK_SET] = new nodejs.NodejsFunction(
+      this,
+      'DeleteFrameworkSetFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/mutation/framework/deleteFrameworkSet.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-deleteFrameworkSet-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
   }
 
   private createSubscriptionResolvers(commonProps: any) {
@@ -347,7 +434,8 @@ export class AppSyncStack extends Construct {
   private createDataSources() {
     // Lambda Data Sources
     Object.entries(this.resolverFunctions).forEach(([name, func]) => {
-      this.api.addLambdaDataSource(`${name}DataSource`, func, {
+      const dataSourceName = `${name}DataSource`;
+      this.dataSources[dataSourceName] = this.api.addLambdaDataSource(dataSourceName, func, {
         description: `Lambda data source for ${name}`,
       });
     });
@@ -358,74 +446,118 @@ export class AppSyncStack extends Construct {
     this.api.createResolver('GetTenantResolver', {
       typeName: 'Query',
       fieldName: 'getTenant',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.GET_TENANT}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.GET_TENANT}DataSource`],
     });
 
     this.api.createResolver('ListTenantsResolver', {
       typeName: 'Query',
       fieldName: 'listTenants',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.LIST_TENANTS}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.LIST_TENANTS}DataSource`],
     });
 
     this.api.createResolver('GetProjectResolver', {
       typeName: 'Query',
       fieldName: 'getProject',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.GET_PROJECT}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.GET_PROJECT}DataSource`],
     });
 
     this.api.createResolver('ListProjectsByTenantResolver', {
       typeName: 'Query',
       fieldName: 'listProjectsByTenant',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.LIST_PROJECTS_BY_TENANT}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.LIST_PROJECTS_BY_TENANT}DataSource`],
     });
 
     this.api.createResolver('GetAnalysisResolver', {
       typeName: 'Query',
       fieldName: 'getAnalysis',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.GET_ANALYSIS}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.GET_ANALYSIS}DataSource`],
     });
 
     this.api.createResolver('ListAnalysesByProjectResolver', {
       typeName: 'Query',
       fieldName: 'listAnalysesByProject',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.LIST_ANALYSES_BY_PROJECT}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.LIST_ANALYSES_BY_PROJECT}DataSource`],
     });
 
     this.api.createResolver('GetDashboardMetricsResolver', {
       typeName: 'Query',
       fieldName: 'getDashboardMetrics',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.GET_DASHBOARD_METRICS}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.GET_DASHBOARD_METRICS}DataSource`],
+    });
+
+    // Framework Management Query resolvers
+    this.api.createResolver('ListFrameworksResolver', {
+      typeName: 'Query',
+      fieldName: 'listFrameworks',
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.LIST_FRAMEWORKS}DataSource`],
+    });
+
+    this.api.createResolver('GetFrameworkResolver', {
+      typeName: 'Query',
+      fieldName: 'getFramework',
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.GET_FRAMEWORK}DataSource`],
+    });
+
+    this.api.createResolver('ListFrameworkRulesResolver', {
+      typeName: 'Query',
+      fieldName: 'listFrameworkRules',
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.LIST_FRAMEWORK_RULES}DataSource`],
+    });
+
+    this.api.createResolver('GetTenantFrameworkConfigResolver', {
+      typeName: 'Query',
+      fieldName: 'getTenantFrameworkConfig',
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.GET_TENANT_FRAMEWORK_CONFIG}DataSource`],
     });
 
     // Mutation resolvers
     this.api.createResolver('CreateProjectResolver', {
       typeName: 'Mutation',
       fieldName: 'createProject',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.CREATE_PROJECT}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.CREATE_PROJECT}DataSource`],
     });
 
     this.api.createResolver('UpdateProjectResolver', {
       typeName: 'Mutation',
       fieldName: 'updateProject',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.UPDATE_PROJECT}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.UPDATE_PROJECT}DataSource`],
     });
 
     this.api.createResolver('CreateAnalysisResolver', {
       typeName: 'Mutation',
       fieldName: 'createAnalysis',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.CREATE_ANALYSIS}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.CREATE_ANALYSIS}DataSource`],
     });
 
     this.api.createResolver('StartAnalysisResolver', {
       typeName: 'Mutation',
       fieldName: 'startAnalysis',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.START_ANALYSIS}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.START_ANALYSIS}DataSource`],
     });
 
     this.api.createResolver('GenerateReportResolver', {
       typeName: 'Mutation',
       fieldName: 'generateReport',
-      dataSource: this.api.getDataSource(`${LAMBDA_FUNCTION_NAMES.GENERATE_REPORT}DataSource`),
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.GENERATE_REPORT}DataSource`],
+    });
+
+    // Framework Management Mutation resolvers
+    this.api.createResolver('CreateFrameworkSetResolver', {
+      typeName: 'Mutation',
+      fieldName: 'createFrameworkSet',
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.CREATE_FRAMEWORK_SET}DataSource`],
+    });
+
+    this.api.createResolver('UpdateFrameworkSetResolver', {
+      typeName: 'Mutation',
+      fieldName: 'updateFrameworkSet',
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.UPDATE_FRAMEWORK_SET}DataSource`],
+    });
+
+    this.api.createResolver('DeleteFrameworkSetResolver', {
+      typeName: 'Mutation',
+      fieldName: 'deleteFrameworkSet',
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.DELETE_FRAMEWORK_SET}DataSource`],
     });
   }
 }

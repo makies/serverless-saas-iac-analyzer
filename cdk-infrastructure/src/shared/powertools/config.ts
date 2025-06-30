@@ -21,8 +21,7 @@ export const logger = new Logger({
 // Tracer インスタンス
 export const tracer = new Tracer({
   serviceName: SERVICE_NAME,
-  captureHTTPsRequests: true,
-  captureResponse: true
+  captureHTTPsRequests: true
 });
 
 // Metrics インスタンス
@@ -37,9 +36,9 @@ export const metrics = new Metrics({
 
 // パラメータ取得ヘルパー
 export const getSecureParameter = async (name: string): Promise<string> => {
-  return await getParameter(name, { decrypt: true });
+  return await getParameter(name, { decrypt: true }) as string;
 };
 
 export const getParameterWithCache = async (name: string, maxAge: number = 300): Promise<string> => {
-  return await getParameter(name, { maxAge });
+  return await getParameter(name, { maxAge }) as string;
 };

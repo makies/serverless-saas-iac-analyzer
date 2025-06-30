@@ -49,7 +49,7 @@ export class HybridMainStack extends cdk.Stack {
     this.monitoringStack = new MonitoringStack(this, 'Monitoring', {
       config,
       // We'll pass references to Amplify resources via SSM parameters
-      appSyncApi: undefined, // Will be referenced via ARN
+      appSyncApi: null, // Will be referenced via ARN
       lambdaFunctions: {}, // Will be referenced via ARNs
       description: 'Advanced monitoring, alerting, and observability',
     });
@@ -60,8 +60,7 @@ export class HybridMainStack extends cdk.Stack {
     // Custom IAM policies for enhanced security
     this.createEnhancedSecurityPolicies(config);
 
-    // Stack dependencies
-    this.monitoringStack.addDependency(this.sbtIntegrationStack);
+    // Dependencies handled automatically by CDK construct references
 
     // CloudFormation outputs for integration
     this.createIntegrationOutputs(config);

@@ -50,11 +50,7 @@ export class MainStack extends cdk.Stack {
       description: 'Monitoring, logging, and alerting infrastructure',
     });
 
-    // Stack dependencies
-    appSyncStack.addDependency(authStack);
-    appSyncStack.addDependency(dataStack);
-    appSyncStack.addDependency(storageStack);
-    monitoringStack.addDependency(appSyncStack);
+    // Dependencies are handled automatically by CDK construct references
 
     // Stack outputs
     new cdk.CfnOutput(this, 'Region', {

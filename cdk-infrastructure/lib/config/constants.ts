@@ -11,6 +11,7 @@ export const WELL_ARCHITECTED_PILLARS = {
 // ユーザーロール
 export const USER_ROLES = {
   SYSTEM_ADMIN: 'SystemAdmin',
+  FRAMEWORK_ADMIN: 'FrameworkAdmin',
   CLIENT_ADMIN: 'ClientAdmin',
   PROJECT_MANAGER: 'ProjectManager',
   ANALYST: 'Analyst',
@@ -68,6 +69,30 @@ export const TABLE_NAMES = {
   FINDINGS: 'Findings',
   REPORTS: 'Reports',
   USERS: 'Users',
+  // Multi-Framework Tables
+  FRAMEWORK_REGISTRY: 'FrameworkRegistry',
+  RULE_DEFINITIONS: 'RuleDefinitions', 
+  TENANT_FRAMEWORK_CONFIG: 'TenantFrameworkConfig',
+  TENANT_ANALYTICS: 'TenantAnalytics',
+  GLOBAL_ANALYTICS: 'GlobalAnalytics',
+} as const;
+
+// Framework Types
+export const FRAMEWORK_TYPES = {
+  WA_FRAMEWORK: 'WA_FRAMEWORK',
+  WA_LENSES: 'WA_LENSES', 
+  SDP: 'SDP',
+  COMPETENCY: 'COMPETENCY',
+  CSPM: 'CSPM',
+  CUSTOM: 'CUSTOM',
+} as const;
+
+// Framework Status
+export const FRAMEWORK_STATUS = {
+  ACTIVE: 'ACTIVE',
+  DEPRECATED: 'DEPRECATED',
+  BETA: 'BETA',
+  DRAFT: 'DRAFT',
 } as const;
 
 // S3 プレフィックス
@@ -131,6 +156,12 @@ export const LAMBDA_FUNCTION_NAMES = {
   LIST_ANALYSES_BY_PROJECT: 'listAnalysesByProject',
   GET_DASHBOARD_METRICS: 'getDashboardMetrics',
   
+  // Framework Management Queries
+  LIST_FRAMEWORKS: 'listFrameworks',
+  GET_FRAMEWORK: 'getFramework',
+  LIST_FRAMEWORK_RULES: 'listFrameworkRules',
+  GET_TENANT_FRAMEWORK_CONFIG: 'getTenantFrameworkConfig',
+  
   // Mutation Resolvers
   CREATE_PROJECT: 'createProject',
   UPDATE_PROJECT: 'updateProject',
@@ -139,6 +170,11 @@ export const LAMBDA_FUNCTION_NAMES = {
   START_ANALYSIS: 'startAnalysis',
   UPDATE_ANALYSIS: 'updateAnalysis',
   GENERATE_REPORT: 'generateReport',
+  
+  // Framework Management Mutations
+  CREATE_FRAMEWORK_SET: 'createFrameworkSet',
+  UPDATE_FRAMEWORK_SET: 'updateFrameworkSet',
+  DELETE_FRAMEWORK_SET: 'deleteFrameworkSet',
   
   // Subscription Resolvers
   ON_ANALYSIS_STATUS_CHANGED: 'onAnalysisStatusChanged',

@@ -12,7 +12,7 @@ import { CLOUDWATCH_METRICS } from '../config/constants';
 
 export interface MonitoringStackProps {
   config: EnvironmentConfig;
-  appSyncApi: appsync.GraphqlApi;
+  appSyncApi: appsync.GraphqlApi | null;
   lambdaFunctions: Record<string, lambda.Function>;
   description?: string;
 }
@@ -55,7 +55,9 @@ export class MonitoringStack extends Construct {
     this.createApplicationMetrics(config);
 
     // Alarms
-    this.createAlarms(appSyncApi, lambdaFunctions, config);
+    if (appSyncApi) {
+      this.createAlarms(appSyncApi, lambdaFunctions, config);
+    }
 
     // Log Groups with retention
     this.setupLogRetention(lambdaFunctions, config);
@@ -66,7 +68,11 @@ export class MonitoringStack extends Construct {
     cdk.Tags.of(this.dashboard).add('Service', 'Monitoring');
   }
 
-  private createAppSyncMetrics(api: appsync.GraphqlApi, config: EnvironmentConfig) {
+  private createAppSyncMetrics(api: appsync.GraphqlApi | null, config: EnvironmentConfig) {
+    if (!api) {
+      // Skip AppSync metrics if API is not provided (e.g., in hybrid mode)
+      return;
+    }
     // AppSync Request Count
     const appSyncRequestCount = new cloudwatch.Metric({
       namespace: 'AWS/AppSync',
@@ -346,7 +352,7 @@ export class MonitoringStack extends Construct {
     });
 
     quotaAlarm.addAlarmAction(
-      new cloudwatch.SnsAction(this.alarmTopic)
+      new cloudwatchActions.SnsAction(this.alarmTopic)
     );
   }
 

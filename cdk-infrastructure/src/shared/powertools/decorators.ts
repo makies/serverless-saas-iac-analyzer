@@ -1,10 +1,10 @@
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
-import { Metrics, MetricUnits } from '@aws-lambda-powertools/metrics';
+import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
 import { AppSyncResolverEvent, Context } from 'aws-lambda';
 import { logger, tracer, metrics } from './config';
 import { extractTenantContext } from '../utils/tenant-context';
-import { TenantContext } from '../../config/types';
+import { TenantContext } from '../../../lib/config/types';
 
 // カスタムデコレータ: GraphQL Resolver用の包括的な観測可能性
 export function observableResolver(
@@ -43,7 +43,9 @@ export function observableResolver(
           userRole: tenantContext.role,
         });
       } catch (error) {
-        logger.warn('Failed to extract tenant context', { error: error.message });
+        logger.warn('Failed to extract tenant context', { 
+          error: error instanceof Error ? error.message : String(error) 
+        });
       }
       
       const startTime = Date.now();
@@ -62,8 +64,8 @@ export function observableResolver(
         
         // 成功メトリクス
         if (addMetrics) {
-          metrics.addMetric(`${resolverName}.Success`, MetricUnits.Count, 1);
-          metrics.addMetric(`${resolverName}.Duration`, MetricUnits.Milliseconds, duration);
+          metrics.addMetric(`${resolverName}.Success`, MetricUnit.Count, 1);
+          metrics.addMetric(`${resolverName}.Duration`, MetricUnit.Milliseconds, duration);
           
           if (tenantContext) {
             metrics.addMetadata('tenantId', tenantContext.tenantId);
@@ -84,14 +86,14 @@ export function observableResolver(
         
         // エラーメトリクス
         if (addMetrics) {
-          metrics.addMetric(`${resolverName}.Error`, MetricUnits.Count, 1);
-          metrics.addMetric(`${resolverName}.Duration`, MetricUnits.Milliseconds, duration);
+          metrics.addMetric(`${resolverName}.Error`, MetricUnit.Count, 1);
+          metrics.addMetric(`${resolverName}.Duration`, MetricUnit.Milliseconds, duration);
         }
         
         if (captureError) {
           logger.error(`${resolverName} resolver failed`, {
-            error: error.message,
-            stack: error.stack,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
             duration,
             arguments: event.arguments,
           });
@@ -99,7 +101,7 @@ export function observableResolver(
         
         // X-Ray セグメントにエラー情報を追加
         if (subsegment) {
-          subsegment.addError(error);
+          subsegment.addError(error instanceof Error ? error : new Error(String(error)));
         }
         
         throw error;
@@ -173,9 +175,9 @@ export function batchProcessor(
               
               processedCount += chunk.length;
               
-              metrics.addMetric(`${processorName}.ChunkProcessed`, MetricUnits.Count, 1);
-              metrics.addMetric(`${processorName}.RecordsProcessed`, MetricUnits.Count, chunk.length);
-              metrics.addMetric(`${processorName}.ChunkDuration`, MetricUnits.Milliseconds, Date.now() - chunkStartTime);
+              metrics.addMetric(`${processorName}.ChunkProcessed`, MetricUnit.Count, 1);
+              metrics.addMetric(`${processorName}.RecordsProcessed`, MetricUnit.Count, chunk.length);
+              metrics.addMetric(`${processorName}.ChunkDuration`, MetricUnit.Milliseconds, Date.now() - chunkStartTime);
               
               break; // 成功したのでリトライループを抜ける
               
@@ -184,17 +186,17 @@ export function batchProcessor(
               
               if (retryCount > maxRetries) {
                 logger.error(`${processorName} chunk failed after ${maxRetries} retries`, {
-                  error: error.message,
+                  error: error instanceof Error ? error.message : String(error),
                   chunkSize: chunk.length,
                   retryCount,
                 });
                 
                 errorCount += chunk.length;
-                metrics.addMetric(`${processorName}.ChunkFailed`, MetricUnits.Count, 1);
-                metrics.addMetric(`${processorName}.RecordsFailed`, MetricUnits.Count, chunk.length);
+                metrics.addMetric(`${processorName}.ChunkFailed`, MetricUnit.Count, 1);
+                metrics.addMetric(`${processorName}.RecordsFailed`, MetricUnit.Count, chunk.length);
               } else {
                 logger.warn(`${processorName} chunk retry ${retryCount}/${maxRetries}`, {
-                  error: error.message,
+                  error: error instanceof Error ? error.message : String(error),
                   chunkSize: chunk.length,
                 });
                 
@@ -215,9 +217,9 @@ export function batchProcessor(
           successRate: ((processedCount / records.length) * 100).toFixed(2) + '%',
         });
         
-        metrics.addMetric(`${processorName}.BatchCompleted`, MetricUnits.Count, 1);
-        metrics.addMetric(`${processorName}.BatchDuration`, MetricUnits.Milliseconds, duration);
-        metrics.addMetric(`${processorName}.SuccessRate`, MetricUnits.Percent, (processedCount / records.length) * 100);
+        metrics.addMetric(`${processorName}.BatchCompleted`, MetricUnit.Count, 1);
+        metrics.addMetric(`${processorName}.BatchDuration`, MetricUnit.Milliseconds, duration);
+        metrics.addMetric(`${processorName}.SuccessRate`, MetricUnit.Percent, (processedCount / records.length) * 100);
         
         return {
           processedCount,
@@ -228,14 +230,14 @@ export function batchProcessor(
         
       } catch (error) {
         logger.error(`${processorName} batch processing failed`, {
-          error: error.message,
-          stack: error.stack,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
           totalRecords: records.length,
           processedCount,
           errorCount,
         });
         
-        metrics.addMetric(`${processorName}.BatchFailed`, MetricUnits.Count, 1);
+        metrics.addMetric(`${processorName}.BatchFailed`, MetricUnit.Count, 1);
         
         throw error;
         
@@ -293,8 +295,8 @@ export function idempotent(
         
       } catch (error) {
         logger.error('Idempotent operation failed', {
-          error: error.message,
-          stack: error.stack,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
         });
         
         throw error;

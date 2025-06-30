@@ -72,11 +72,7 @@ export class AuthStack extends Construct {
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       selfSignUpEnabled: false, // 招待制
       userInvitation: {
-        allowAdminCreateUserOnly: true,
-        inviteMessageTemplate: {
-          emailSubject: `${config.cognitoConfig.userPoolName}への招待`,
-          emailBody: `
-こんにちは,
+        emailBody: `こんにちは,
 
 ${config.cognitoConfig.userPoolName}にご招待いたします。
 
@@ -87,9 +83,9 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
 
 アプリケーション URL: ${config.cognitoConfig.allowedOrigins[0]}
 
-ご質問がございましたら、システム管理者までお問い合わせください。
-          `,
-        },
+ご質問がございましたら、システム管理者までお問い合わせください。`,
+        emailSubject: `${config.cognitoConfig.userPoolName}への招待`,
+        smsMessage: `${config.cognitoConfig.userPoolName}への招待 - ユーザー名: {username}, 一時パスワード: {####}`
       },
       autoVerify: {
         email: true,

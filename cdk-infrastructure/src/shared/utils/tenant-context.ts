@@ -1,6 +1,6 @@
 import { AppSyncResolverEvent } from 'aws-lambda';
 import { logger } from '../powertools/config';
-import { TenantContext } from '../../lib/config/types';
+import { TenantContext } from '../../../lib/config/types';
 
 /**
  * AppSync Event から テナントコンテキストを抽出
