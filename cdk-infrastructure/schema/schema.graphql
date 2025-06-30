@@ -246,6 +246,7 @@ type User {
 
 enum UserRole {
   SYSTEM_ADMIN
+  FRAMEWORK_ADMIN
   CLIENT_ADMIN
   PROJECT_MANAGER
   ANALYST
@@ -306,6 +307,90 @@ type DashboardMetrics {
   avgScore: Float!
   recentAnalyses: [Analysis!]!
   pillarScores: [PillarScore!]!
+}
+
+# Framework Management Types
+type Framework {
+  id: ID!
+  type: FrameworkType!
+  name: String!
+  description: String!
+  version: String!
+  status: FrameworkStatus!
+  rules: [Rule!]!
+  categories: [String!]!
+  metadata: AWSJSON
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+enum FrameworkType {
+  WA_FRAMEWORK
+  WA_LENSES
+  SDP
+  COMPETENCY
+  CSPM
+  CUSTOM
+}
+
+enum FrameworkStatus {
+  ACTIVE
+  DRAFT
+  DEPRECATED
+  ARCHIVED
+}
+
+type Rule {
+  id: ID!
+  frameworkId: ID!
+  ruleId: String!
+  name: String!
+  description: String!
+  severity: FindingSeverity!
+  pillar: WellArchitectedPillar
+  category: String!
+  tags: [String!]!
+  implementation: RuleImplementation!
+  metadata: AWSJSON
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type RuleImplementation {
+  checkType: String!
+  conditions: AWSJSON!
+  parameters: AWSJSON
+  remediation: String!
+}
+
+type TenantFrameworkConfig {
+  tenantId: ID!
+  frameworkId: ID!
+  name: String!
+  description: String
+  isDefault: Boolean!
+  enabledRules: [String!]!
+  customRules: [CustomRule!]!
+  ruleOverrides: AWSJSON
+  settings: FrameworkSettings
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type CustomRule {
+  id: ID!
+  name: String!
+  description: String!
+  severity: FindingSeverity!
+  category: String!
+  implementation: RuleImplementation!
+}
+
+type FrameworkSettings {
+  strictMode: Boolean!
+  includeInformational: Boolean!
+  customSeverityLevels: AWSJSON
+  notificationSettings: AWSJSON
 }
 
 # Queries
@@ -370,6 +455,19 @@ type Query {
   
   getProjectMetrics(projectId: ID!): ProjectMetrics
     @aws_auth(cognito_groups: ["SystemAdmins", "ClientAdmins", "ProjectManagers", "Analysts", "Viewers"])
+  
+  # Framework Management queries
+  listFrameworks(type: FrameworkType, status: FrameworkStatus, limit: Int, nextToken: String): FrameworkConnection
+    @aws_auth(cognito_groups: ["SystemAdmins", "FrameworkAdmins", "ClientAdmins", "ProjectManagers", "Analysts"])
+  
+  getFramework(id: ID!): Framework
+    @aws_auth(cognito_groups: ["SystemAdmins", "FrameworkAdmins", "ClientAdmins", "ProjectManagers", "Analysts"])
+  
+  listFrameworkRules(frameworkId: ID!, category: String, severity: FindingSeverity, limit: Int, nextToken: String): RuleConnection
+    @aws_auth(cognito_groups: ["SystemAdmins", "FrameworkAdmins", "ClientAdmins", "ProjectManagers", "Analysts"])
+  
+  getTenantFrameworkConfig(tenantId: ID!, frameworkId: ID!): TenantFrameworkConfig
+    @aws_auth(cognito_groups: ["SystemAdmins", "FrameworkAdmins", "ClientAdmins", "ProjectManagers"])
 }
 
 # Mutations
@@ -420,6 +518,16 @@ type Mutation {
   
   suspendTenant(input: SuspendTenantInput!): Tenant
     @aws_auth(cognito_groups: ["SystemAdmins"])
+  
+  # Framework Management mutations
+  createFrameworkSet(input: CreateFrameworkSetInput!): TenantFrameworkConfig
+    @aws_auth(cognito_groups: ["SystemAdmins", "FrameworkAdmins", "ClientAdmins"])
+  
+  updateFrameworkSet(input: UpdateFrameworkSetInput!): TenantFrameworkConfig
+    @aws_auth(cognito_groups: ["SystemAdmins", "FrameworkAdmins", "ClientAdmins"])
+  
+  deleteFrameworkSet(input: DeleteFrameworkSetInput!): TenantFrameworkConfig
+    @aws_auth(cognito_groups: ["SystemAdmins", "FrameworkAdmins", "ClientAdmins"])
 }
 
 # Subscriptions
@@ -593,6 +701,59 @@ input NotificationSettingsInput {
   systemAlerts: Boolean
 }
 
+# Framework Management Input Types
+input CreateFrameworkSetInput {
+  tenantId: ID!
+  frameworkId: ID!
+  name: String!
+  description: String
+  isDefault: Boolean
+  enabledRules: [String!]!
+  customRules: [CustomRuleInput!]
+  ruleOverrides: AWSJSON
+  settings: FrameworkSettingsInput
+}
+
+input UpdateFrameworkSetInput {
+  tenantId: ID!
+  frameworkId: ID!
+  name: String
+  description: String
+  isDefault: Boolean
+  enabledRules: [String!]
+  customRules: [CustomRuleInput!]
+  ruleOverrides: AWSJSON
+  settings: FrameworkSettingsInput
+}
+
+input DeleteFrameworkSetInput {
+  tenantId: ID!
+  frameworkId: ID!
+}
+
+input CustomRuleInput {
+  id: ID
+  name: String!
+  description: String!
+  severity: FindingSeverity!
+  category: String!
+  implementation: RuleImplementationInput!
+}
+
+input RuleImplementationInput {
+  checkType: String!
+  conditions: AWSJSON!
+  parameters: AWSJSON
+  remediation: String!
+}
+
+input FrameworkSettingsInput {
+  strictMode: Boolean
+  includeInformational: Boolean
+  customSeverityLevels: AWSJSON
+  notificationSettings: AWSJSON
+}
+
 # Response Types
 type InviteUserResult {
   success: Boolean!
@@ -628,5 +789,15 @@ type UserConnection {
 
 type FindingConnection {
   items: [Finding]!
+  nextToken: String
+}
+
+type FrameworkConnection {
+  items: [Framework]!
+  nextToken: String
+}
+
+type RuleConnection {
+  items: [Rule]!
   nextToken: String
 }
