@@ -1,6 +1,6 @@
 import type { Handler } from 'aws-lambda';
 import { Logger } from '@aws-lambda-powertools/logger';
-import { Metrics, MetricUnits } from '@aws-lambda-powertools/metrics';
+import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import { logMetrics } from '@aws-lambda-powertools/metrics/middleware';
@@ -274,9 +274,9 @@ const lambdaHandler: Handler<GenerateReportArgs, GenerateReportResult> = async (
     });
 
     // Add success metrics
-    metrics.addMetric('ReportGenerated', MetricUnits.Count, 1);
-    metrics.addMetric('ReportSize', MetricUnits.Bytes, reportBuffer.length);
-    metrics.addMetric('FindingsProcessed', MetricUnits.Count, templateData.findings.length);
+    metrics.addMetric('ReportGenerated', MetricUnit.Count, 1);
+    metrics.addMetric('ReportSize', MetricUnit.Bytes, reportBuffer.length);
+    metrics.addMetric('FindingsProcessed', MetricUnit.Count, templateData.findings.length);
 
     logger.info('Report generation completed successfully', {
       reportId,
@@ -332,7 +332,7 @@ const lambdaHandler: Handler<GenerateReportArgs, GenerateReportResult> = async (
     }
 
     // Add error metrics
-    metrics.addMetric('ReportFailed', MetricUnits.Count, 1);
+    metrics.addMetric('ReportFailed', MetricUnit.Count, 1);
 
     return {
       success: false,

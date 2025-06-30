@@ -101,6 +101,11 @@ const baseConfig: Omit<EnvironmentConfig, 'environment' | 'account' | 'region'> 
     region: 'ap-northeast-1',
   },
   
+  sbtConfig: {
+    systemAdminEmail: 'admin@cloudbpa.com',
+    controlPlaneName: 'CloudBPA-ControlPlane',
+  },
+  
   monitoringConfig: {
     enableXRay: true,
     enableCloudWatch: true,

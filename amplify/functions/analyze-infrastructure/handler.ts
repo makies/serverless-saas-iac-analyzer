@@ -1,6 +1,6 @@
 import type { Handler } from 'aws-lambda';
 import { Logger } from '@aws-lambda-powertools/logger';
-import { Metrics, MetricUnits } from '@aws-lambda-powertools/metrics';
+import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import { logMetrics } from '@aws-lambda-powertools/metrics/middleware';
@@ -113,8 +113,8 @@ const lambdaHandler: Handler<AnalyzeInfrastructureArgs, AnalyzeInfrastructureRes
       });
 
       // Add metrics
-      metrics.addMetric('ResourcesProcessed', MetricUnits.Count, infraData.resources.length);
-      metrics.addMetric('FindingsGenerated', MetricUnits.Count, findings.length);
+      metrics.addMetric('ResourcesProcessed', MetricUnit.Count, infraData.resources.length);
+      metrics.addMetric('FindingsGenerated', MetricUnit.Count, findings.length);
     }
 
     // Generate summary statistics
@@ -134,8 +134,8 @@ const lambdaHandler: Handler<AnalyzeInfrastructureArgs, AnalyzeInfrastructureRes
     });
 
     // Send success metrics
-    metrics.addMetric('AnalysisCompleted', MetricUnits.Count, 1);
-    metrics.addMetric('AnalysisDuration', MetricUnits.Milliseconds, Date.now() - parseInt(context.getRemainingTimeInMillis().toString()));
+    metrics.addMetric('AnalysisCompleted', MetricUnit.Count, 1);
+    metrics.addMetric('AnalysisDuration', MetricUnit.Milliseconds, Date.now() - parseInt(context.getRemainingTimeInMillis().toString()));
 
     logger.info('Infrastructure analysis completed successfully', {
       analysisId,
@@ -178,7 +178,7 @@ const lambdaHandler: Handler<AnalyzeInfrastructureArgs, AnalyzeInfrastructureRes
     }
 
     // Add error metrics
-    metrics.addMetric('AnalysisFailed', MetricUnits.Count, 1);
+    metrics.addMetric('AnalysisFailed', MetricUnit.Count, 1);
 
     return {
       success: false,

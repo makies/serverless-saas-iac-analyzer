@@ -71,7 +71,7 @@ export class AuthStack extends Construct {
       },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       selfSignUpEnabled: false, // 招待制
-      adminCreateUserConfig: {
+      userInvitation: {
         allowAdminCreateUserOnly: true,
         inviteMessageTemplate: {
           emailSubject: `${config.cognitoConfig.userPoolName}への招待`,
@@ -140,11 +140,6 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
       },
       generateSecret: false, // SPAなのでシークレット不要
       preventUserExistenceErrors: true,
-      tokenValidity: {
-        accessToken: cdk.Duration.hours(1),
-        idToken: cdk.Duration.hours(1),
-        refreshToken: cdk.Duration.days(30),
-      },
       refreshTokenValidity: cdk.Duration.days(30),
       accessTokenValidity: cdk.Duration.hours(1),
       idTokenValidity: cdk.Duration.hours(1),

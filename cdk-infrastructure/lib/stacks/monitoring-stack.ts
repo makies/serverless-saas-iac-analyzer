@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as appsync from 'aws-cdk-lib/aws-appsync';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sns from 'aws-cdk-lib/aws-sns';
@@ -287,7 +288,7 @@ export class MonitoringStack extends Construct {
     });
 
     appSyncErrorAlarm.addAlarmAction(
-      new cloudwatch.SnsAction(this.alarmTopic)
+      new cloudwatchActions.SnsAction(this.alarmTopic)
     );
 
     // Lambda Error Rate Alarms
@@ -305,7 +306,7 @@ export class MonitoringStack extends Construct {
       });
 
       errorAlarm.addAlarmAction(
-        new cloudwatch.SnsAction(this.alarmTopic)
+        new cloudwatchActions.SnsAction(this.alarmTopic)
       );
 
       // Duration Alarm for critical functions
@@ -323,7 +324,7 @@ export class MonitoringStack extends Construct {
         });
 
         durationAlarm.addAlarmAction(
-          new cloudwatch.SnsAction(this.alarmTopic)
+          new cloudwatchActions.SnsAction(this.alarmTopic)
         );
       }
     });
