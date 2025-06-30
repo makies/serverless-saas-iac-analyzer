@@ -67,7 +67,7 @@ export class ReportGenerator {
         size: pdfBuffer.length,
       });
 
-      return pdfBuffer;
+      return Buffer.from(pdfBuffer);
     } catch (error) {
       this.config.logger.error('Error generating PDF report:', { error });
       throw error;
@@ -100,7 +100,7 @@ export class ReportGenerator {
 
       this.config.logger.info('Excel report generated successfully', {
         reportType,
-        size: buffer.length,
+        size: buffer.byteLength,
       });
 
       return Buffer.from(buffer);

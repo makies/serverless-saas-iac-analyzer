@@ -160,20 +160,20 @@ const lambdaHandler: Handler<GenerateReportArgs, GenerateReportResult> = async (
       summary: {
         totalResources: analysisData.resultSummary?.totalResources || 0,
         totalFindings: analysisData.findings.length,
-        findingsBySeverity: analysisData.resultSummary?.findingsBySeverity || {
-          CRITICAL: 0,
-          HIGH: 0,
-          MEDIUM: 0,
-          LOW: 0,
-          INFO: 0,
+        findingsBySeverity: {
+          CRITICAL: analysisData.resultSummary?.findingsBySeverity?.CRITICAL || 0,
+          HIGH: analysisData.resultSummary?.findingsBySeverity?.HIGH || 0,
+          MEDIUM: analysisData.resultSummary?.findingsBySeverity?.MEDIUM || 0,
+          LOW: analysisData.resultSummary?.findingsBySeverity?.LOW || 0,
+          INFO: analysisData.resultSummary?.findingsBySeverity?.INFO || 0,
         },
-        findingsByPillar: analysisData.resultSummary?.findingsByPillar || {
-          OPERATIONAL_EXCELLENCE: 0,
-          SECURITY: 0,
-          RELIABILITY: 0,
-          PERFORMANCE_EFFICIENCY: 0,
-          COST_OPTIMIZATION: 0,
-          SUSTAINABILITY: 0,
+        findingsByPillar: {
+          OPERATIONAL_EXCELLENCE: analysisData.resultSummary?.findingsByPillar?.OPERATIONAL_EXCELLENCE || 0,
+          SECURITY: analysisData.resultSummary?.findingsByPillar?.SECURITY || 0,
+          RELIABILITY: analysisData.resultSummary?.findingsByPillar?.RELIABILITY || 0,
+          PERFORMANCE_EFFICIENCY: analysisData.resultSummary?.findingsByPillar?.PERFORMANCE_EFFICIENCY || 0,
+          COST_OPTIMIZATION: analysisData.resultSummary?.findingsByPillar?.COST_OPTIMIZATION || 0,
+          SUSTAINABILITY: analysisData.resultSummary?.findingsByPillar?.SUSTAINABILITY || 0,
         },
         complianceScore: calculateComplianceScore(analysisData.findings),
         riskLevel: calculateRiskLevel(analysisData.findings),
@@ -190,7 +190,14 @@ const lambdaHandler: Handler<GenerateReportArgs, GenerateReportResult> = async (
         ruleId: finding.ruleId,
         line: finding.line,
       })),
-      branding,
+      branding: branding ? {
+        logo: branding.logo,
+        companyName: branding.companyName,
+        colors: branding.colors ? {
+          primary: branding.colors.primary || '#0066cc',
+          secondary: branding.colors.secondary || '#6c757d',
+        } : undefined,
+      } : undefined,
     };
 
     // Add charts data if requested

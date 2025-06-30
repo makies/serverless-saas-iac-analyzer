@@ -111,8 +111,8 @@ export class TenantContext {
     status: string,
     additionalData: Record<string, any> = {}
   ): Promise<void> {
-    const updateExpression = 'SET #status = :status, updatedAt = :updatedAt';
-    const expressionAttributeNames = { '#status': 'status' };
+    let updateExpression = 'SET #status = :status, updatedAt = :updatedAt';
+    const expressionAttributeNames: Record<string, string> = { '#status': 'status' };
     const expressionAttributeValues: Record<string, any> = {
       ':status': status,
       ':updatedAt': new Date().toISOString(),
@@ -204,7 +204,15 @@ export class TenantContext {
       const project = projectResult.Item ? unmarshall(projectResult.Item) : { id: analysis.projectId, name: 'Unknown' };
 
       return {
-        ...analysis,
+        id: analysis.id,
+        tenantId: analysis.tenantId,
+        projectId: analysis.projectId,
+        name: analysis.name,
+        type: analysis.type,
+        status: analysis.status,
+        createdAt: analysis.createdAt,
+        completedAt: analysis.completedAt,
+        resultSummary: analysis.resultSummary,
         tenant: {
           id: tenant.id,
           name: tenant.name,
@@ -214,7 +222,18 @@ export class TenantContext {
           name: project.name,
           description: project.description,
         },
-        findings,
+        findings: findings.map(f => ({
+          id: f.id || '',
+          title: f.title || '',
+          description: f.description || '',
+          severity: f.severity || '',
+          pillar: f.pillar || '',
+          resource: f.resource,
+          recommendation: f.recommendation || '',
+          category: f.category,
+          ruleId: f.ruleId,
+          line: f.line,
+        })),
       };
     } catch (error) {
       console.error('Error getting analysis with findings:', error);

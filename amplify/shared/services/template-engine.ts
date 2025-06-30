@@ -122,8 +122,8 @@ export class TemplateEngine {
     });
 
     // Helper for conditional rendering
-    Handlebars.registerHelper('ifEquals', function(arg1: any, arg2: any, options: any) {
-      return (arg1 === arg2) ? options.fn(this) : options.inverse(this);
+    Handlebars.registerHelper('ifEquals', (arg1: any, arg2: any, options: any) => {
+      return (arg1 === arg2) ? options.fn(options) : options.inverse(options);
     });
 
     // Helper for array length

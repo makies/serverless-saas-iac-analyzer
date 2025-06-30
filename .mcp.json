@@ -24,6 +24,16 @@
       "autoApprove": [],
       "disabled": false
     },
+    "awslabs.cfn-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.cfn-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "aws-tl",
+        "AWS_REGION": "ap-northeast-1"
+      },
+      "disabled": false,
+      "autoApprove": []
+    },
     "awslabs.aws-documentation-mcp-server": {
       "command": "uvx",
       "args": ["awslabs.aws-documentation-mcp-server@latest"],
@@ -95,16 +105,16 @@
       "command": "uvx",
       "args": ["awslabs.iam-mcp-server@latest", "--readonly"],
       "env": {
-        "AWS_PROFILE": "your-aws-profile",
-        "AWS_REGION": "us-east-1"
+        "AWS_PROFILE": "aws-tl",
+        "AWS_REGION": "ap-northeast-1"
       }
     },
     "awslabs.aws-diagram-mcp-server": {
       "command": "uvx",
       "args": ["awslabs.aws-diagram-mcp-server"],
       "env": {
-        "AWS_PROFILE": "your-aws-profile",
-        "AWS_REGION": "us-east-1",
+        "AWS_PROFILE": "aws-tl",
+        "AWS_REGION": "ap-northeast-1",
         "FASTMCP_LOG_LEVEL": "ERROR"
       },
       "autoApprove": [],
@@ -114,8 +124,8 @@
       "command": "uvx",
       "args": ["awslabs.nova-canvas-mcp-server@latest"],
       "env": {
-        "AWS_PROFILE": "your-aws-profile",
-        "AWS_REGION": "us-east-1",
+        "AWS_PROFILE": "aws-tl",
+        "AWS_REGION": "ap-northeast-1",
         "FASTMCP_LOG_LEVEL": "ERROR"
       },
       "disabled": false,

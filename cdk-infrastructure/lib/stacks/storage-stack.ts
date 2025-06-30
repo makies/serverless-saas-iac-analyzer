@@ -20,10 +20,10 @@ export class StorageStack extends Construct {
     
     this.buckets = {};
 
-    // メインアプリケーションバケット (短縮名で衝突回避)
-    const timestamp = Date.now().toString().slice(-8); // 最後の8桁のみ使用
+    // メインアプリケーションバケット (環境ベースの安定した命名)
+    const bucketSuffix = config.environment;
     this.buckets.ApplicationData = new s3.Bucket(this, 'ApplicationDataBucket', {
-      bucketName: `cloudbpa-app-${config.environment}-${timestamp}`,
+      bucketName: `cloudbpa-app-${bucketSuffix}`,
       versioned: config.s3Config.versioning,
       encryption: config.s3Config.encryption 
         ? s3.BucketEncryption.S3_MANAGED 
@@ -83,7 +83,7 @@ export class StorageStack extends Construct {
 
     // CloudFormation テンプレート保存用バケット
     this.buckets.Templates = new s3.Bucket(this, 'TemplatesBucket', {
-      bucketName: `cloudbpa-tpl-${config.environment}-${timestamp}`,
+      bucketName: `cloudbpa-tpl-${bucketSuffix}`,
       versioned: true,
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -100,7 +100,7 @@ export class StorageStack extends Construct {
 
     // ログ保存用バケット
     this.buckets.Logs = new s3.Bucket(this, 'LogsBucket', {
-      bucketName: `cloudbpa-logs-${config.environment}-${timestamp}`,
+      bucketName: `cloudbpa-logs-${bucketSuffix}`,
       versioned: false,
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -134,7 +134,7 @@ export class StorageStack extends Construct {
     // バックアップ用バケット（本番環境のみ）
     if (config.environment === 'prod') {
       this.buckets.Backup = new s3.Bucket(this, 'BackupBucket', {
-        bucketName: `cloudbpa-backup-${config.environment}-${timestamp}`,
+        bucketName: `cloudbpa-backup-${bucketSuffix}`,
         versioned: true,
         encryption: s3.BucketEncryption.KMS_MANAGED,
         blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,

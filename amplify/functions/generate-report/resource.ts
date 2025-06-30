@@ -19,10 +19,6 @@ import { defineFunction } from '@aws-amplify/backend';
  */
 export const generateReport = defineFunction({
   name: 'generate-report',
-  entry: './handler.ts',
-  runtime: 'nodejs20.x',
-  timeout: 600, // 10 minutes for report generation
-  memoryMB: 2048, // Higher memory for PDF/Excel generation
   environment: {
     // Tenant isolation
     TENANT_TABLE_NAME: process.env.TENANT_TABLE_NAME || '',
@@ -74,31 +70,6 @@ export const generateReport = defineFunction({
     // Retention (Basic Tier)
     RETENTION_DAYS: process.env.RETENTION_DAYS || '90',
   },
-  bundling: {
-    minify: true,
-    sourceMap: true,
-    target: 'node20',
-    format: 'esm',
-    platform: 'node',
-    externalModules: [
-      '@aws-sdk/client-dynamodb',
-      '@aws-sdk/client-s3',
-      '@aws-sdk/client-bedrock-runtime',
-      '@aws-lambda-powertools/logger',
-      '@aws-lambda-powertools/metrics',
-      '@aws-lambda-powertools/tracer',
-      'puppeteer-core',
-      'exceljs',
-      'handlebars',
-      'chartjs-node-canvas',
-    ],
-  },
-  layers: [
-    // Add shared layer for common dependencies
-    process.env.SHARED_LAYER_ARN || '',
-    // Add layer with headless Chrome for PDF generation
-    process.env.PUPPETEER_LAYER_ARN || '',
-  ].filter(Boolean),
 });
 
 /**
