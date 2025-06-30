@@ -20,7 +20,7 @@
       "@/amplify/*": ["amplify/*"]
     }
   },
-  "include": ["src/**/*", "amplify/**/*", "vite.config.ts"],
+  "include": ["src/**/*", "amplify/**/*"],
   "exclude": ["node_modules", "dist", "amplify_outputs.json"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

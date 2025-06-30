@@ -26,16 +26,7 @@
     "@aws-amplify/backend": "^1.2.1",
     "@aws-amplify/backend-cli": "^1.2.6",
     "@biomejs/biome": "^2.0.6",
-    "typescript": "^5.3.3",
-    "aws-cdk-lib": "^2.162.1",
-    "constructs": "^10.0.0"
-  },
-  "dependencies": {
-    "@aws-amplify/backend-ai": "^1.1.1"
-  },
-  "overrides": {
-    "@aws-cdk/aws-appsync-alpha": "2.59.0-alpha.0",
-    "graphql": "^16.8.1"
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0"

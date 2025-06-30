@@ -32,7 +32,7 @@ export function useAnalyses(projectId?: string) {
     try {
       setLoading(true);
       const response = await analysisQueries.listAnalyses(projectId);
-      setAnalyses((response.data as Analysis[]) || []);
+      setAnalyses(Array.isArray(response.data) ? response.data as Analysis[] : []);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load analyses');
@@ -63,8 +63,8 @@ export function useAnalyses(projectId?: string) {
         tenantId: user.tenantId,
       });
 
-      if (response.data) {
-        setAnalyses((prev) => [...prev, response.data as Analysis]);
+      if (response.data && response.data !== null) {
+        setAnalyses((prev) => [...prev, response.data as unknown as Analysis]);
       }
 
       return response;

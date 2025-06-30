@@ -1,6 +1,10 @@
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../amplify/data/resource';
+import { generateClient } from 'aws-amplify/api';
 
-export const client = generateClient<Schema>();
+// Type definition for our GraphQL schema
+interface Schema {
+  // Will be populated when actual schema is available
+}
+
+export const client = generateClient();
 
 export type Client = typeof client;

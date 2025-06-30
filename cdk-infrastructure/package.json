@@ -19,13 +19,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-lambda-powertools/logger": "^1.17.0",
-    "@aws-lambda-powertools/tracer": "^1.17.0",
-    "@aws-lambda-powertools/metrics": "^1.17.0",
-    "@aws-lambda-powertools/parser": "^1.17.0",
-    "@aws-lambda-powertools/idempotency": "^1.17.0",
-    "@aws-lambda-powertools/parameters": "^1.17.0",
-    "@aws-lambda-powertools/batch": "^1.17.0",
+    "@aws-lambda-powertools/logger": "^2.8.0",
+    "@aws-lambda-powertools/tracer": "^2.8.0",
+    "@aws-lambda-powertools/metrics": "^2.8.0",
+    "@aws-lambda-powertools/parser": "^2.8.0",
+    "@aws-lambda-powertools/idempotency": "^2.8.0",
+    "@aws-lambda-powertools/parameters": "^2.8.0",
+    "@aws-lambda-powertools/batch": "^2.8.0",
     "aws-cdk-lib": "^2.100.0",
     "constructs": "^10.0.0",
     "@aws-sdk/client-dynamodb": "^3.400.0",
@@ -56,7 +56,6 @@
     "eslint-config-prettier": "^9.0.0",
     "prettier": "^3.0.0",
     "aws-cdk": "^2.100.0",
-    "@aws-cdk/aws-appsync-alpha": "^2.100.0-alpha.0",
     "esbuild": "^0.19.0"
   },
   "engines": {

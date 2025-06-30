@@ -17,10 +17,6 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    checkAuthState();
-  }, [checkAuthState]);
-
   const checkAuthState = async () => {
     try {
       setLoading(true);
@@ -49,6 +45,10 @@ export function useAuth() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    checkAuthState();
+  }, []);
 
   const hasPermission = (requiredRole: string): boolean => {
     if (!user?.role) return false;

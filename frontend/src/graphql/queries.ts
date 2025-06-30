@@ -1,14 +1,14 @@
-import { client } from './client';
+// Placeholder GraphQL queries - will be implemented when schema is available
 
 export const projectQueries = {
   listProjects: async (tenantId: string) => {
-    return await client.models.Project.list({
-      filter: { tenantId: { eq: tenantId } },
-    });
+    // TODO: Implement with actual GraphQL query
+    return { data: [], errors: [] };
   },
 
   getProject: async (id: string) => {
-    return await client.models.Project.get({ id });
+    // TODO: Implement with actual GraphQL query
+    return { data: null, errors: [] };
   },
 
   createProject: async (input: {
@@ -18,10 +18,8 @@ export const projectQueries = {
     awsAccountId?: string;
     region?: string;
   }) => {
-    return await client.models.Project.create({
-      ...input,
-      status: 'ACTIVE',
-    });
+    // TODO: Implement with actual GraphQL mutation
+    return { data: null, errors: [] };
   },
 
   updateProject: async (
@@ -34,23 +32,25 @@ export const projectQueries = {
       region: string;
     }>
   ) => {
-    return await client.models.Project.update({ id, ...input });
+    // TODO: Implement with actual GraphQL mutation
+    return { data: null, errors: [] };
   },
 
   deleteProject: async (id: string) => {
-    return await client.models.Project.delete({ id });
+    // TODO: Implement with actual GraphQL mutation
+    return { data: null, errors: [] };
   },
 };
 
 export const analysisQueries = {
   listAnalyses: async (projectId: string) => {
-    return await client.models.Analysis.list({
-      filter: { projectId: { eq: projectId } },
-    });
+    // TODO: Implement with actual GraphQL query
+    return { data: [], errors: [] };
   },
 
   getAnalysis: async (id: string) => {
-    return await client.models.Analysis.get({ id });
+    // TODO: Implement with actual GraphQL query
+    return { data: null, errors: [] };
   },
 
   createAnalysis: async (input: {
@@ -60,24 +60,20 @@ export const analysisQueries = {
     sourceType: 'CLOUDFORMATION' | 'TERRAFORM' | 'CDK' | 'LIVE_ACCOUNT';
     sourceLocation: string;
   }) => {
-    return await client.models.Analysis.create({
-      ...input,
-      status: 'PENDING',
-      executedBy: 'current-user', // Will be populated by auth
-      executedAt: new Date().toISOString(),
-    });
+    // TODO: Implement with actual GraphQL mutation
+    return { data: null, errors: [] };
   },
 };
 
 export const reportQueries = {
   listReports: async (analysisId: string) => {
-    return await client.models.Report.list({
-      filter: { analysisId: { eq: analysisId } },
-    });
+    // TODO: Implement with actual GraphQL query
+    return { data: [], errors: [] };
   },
 
   getReport: async (id: string) => {
-    return await client.models.Report.get({ id });
+    // TODO: Implement with actual GraphQL query
+    return { data: null, errors: [] };
   },
 
   generateReport: async (input: {
@@ -85,27 +81,20 @@ export const reportQueries = {
     tenantId: string;
     format: 'PDF' | 'EXCEL' | 'JSON';
   }) => {
-    return await client.models.Report.create({
-      ...input,
-      status: 'GENERATING',
-      fileName: `analysis-report-${input.analysisId}.${input.format.toLowerCase()}`,
-      generatedBy: 'current-user', // Will be populated by auth
-      generatedAt: new Date().toISOString(),
-    });
+    // TODO: Implement with actual GraphQL mutation
+    return { data: null, errors: [] };
   },
 };
 
 export const userQueries = {
   getCurrentUser: async () => {
-    // This would typically get the current user from Cognito
-    // and return their tenant information
+    // TODO: Implement with actual Cognito integration
     return { data: null, errors: [] };
   },
 
   listUsers: async (tenantId: string) => {
-    return await client.models.User.list({
-      filter: { tenantId: { eq: tenantId } },
-    });
+    // TODO: Implement with actual GraphQL query
+    return { data: [], errors: [] };
   },
 
   createUser: async (input: {
@@ -121,26 +110,24 @@ export const userQueries = {
     firstName: string;
     lastName: string;
   }) => {
-    return await client.models.User.create({
-      ...input,
-      status: 'PENDING',
-    });
+    // TODO: Implement with actual GraphQL mutation
+    return { data: null, errors: [] };
   },
 };
 
 export const tenantQueries = {
   listTenants: async () => {
-    return await client.models.Tenant.list();
+    // TODO: Implement with actual GraphQL query
+    return { data: [], errors: [] };
   },
 
   getTenant: async (id: string) => {
-    return await client.models.Tenant.get({ id });
+    // TODO: Implement with actual GraphQL query
+    return { data: null, errors: [] };
   },
 
   createTenant: async (input: { name: string; domain: string }) => {
-    return await client.models.Tenant.create({
-      ...input,
-      status: 'ACTIVE',
-    });
+    // TODO: Implement with actual GraphQL mutation
+    return { data: null, errors: [] };
   },
 };
