@@ -137,8 +137,8 @@ export class HybridMainStack extends cdk.Stack {
             `arn:aws:s3:::cloudbpa-storage-${config.environment}/*`,
           ],
           conditions: {
-            StringNotEquals: {
-              's3:ExistingObjectTag/TenantId': '${aws:PrincipalTag/TenantId}',
+            StringNotLike: {
+              's3:prefix': '${cognito-identity.amazonaws.com:sub}/*',
             },
           },
         }),
@@ -183,8 +183,8 @@ export class HybridMainStack extends cdk.Stack {
             `arn:aws:dynamodb:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:table/*`,
           ],
           conditions: {
-            'ForAllValues:StringEquals': {
-              'dynamodb:LeadingKeys': ['${aws:PrincipalTag/TenantId}'],
+            'ForAllValues:StringLike': {
+              'dynamodb:LeadingKeys': ['${cognito-identity.amazonaws.com:sub}'],
             },
           },
         }),

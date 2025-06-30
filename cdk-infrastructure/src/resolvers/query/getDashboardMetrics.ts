@@ -158,8 +158,8 @@ const getDashboardMetrics: AppSyncResolverHandler<GetDashboardMetricsArgs, Dashb
         { frameworkId: 'wa-saas', name: 'SaaS Lens', usageCount: Math.floor(totalAnalyses * 0.2) },
       ],
       trends: {
-        analysesOverTime: this.generateTrendData(daysBack, totalAnalyses),
-        findingsOverTime: this.generateFindingsTrendData(daysBack, criticalFindings, highFindings, mediumFindings, lowFindings),
+        analysesOverTime: generateTrendData(daysBack, totalAnalyses),
+        findingsOverTime: generateFindingsTrendData(daysBack, criticalFindings, highFindings, mediumFindings, lowFindings),
       },
       generatedAt: new Date().toISOString(),
     };
