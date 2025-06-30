@@ -29,7 +29,9 @@ export class DataStack extends Construct {
       billingMode: config.dynamoDbConfig.billingMode === 'PAY_PER_REQUEST' 
         ? dynamodb.BillingMode.PAY_PER_REQUEST 
         : dynamodb.BillingMode.PROVISIONED,
-      pointInTimeRecovery: config.dynamoDbConfig.pointInTimeRecovery,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.dynamoDbConfig.pointInTimeRecovery,
+      },
       encryption: config.dynamoDbConfig.encryption 
         ? dynamodb.TableEncryption.AWS_MANAGED 
         : dynamodb.TableEncryption.DEFAULT,
@@ -63,7 +65,9 @@ export class DataStack extends Construct {
       billingMode: config.dynamoDbConfig.billingMode === 'PAY_PER_REQUEST' 
         ? dynamodb.BillingMode.PAY_PER_REQUEST 
         : dynamodb.BillingMode.PROVISIONED,
-      pointInTimeRecovery: config.dynamoDbConfig.pointInTimeRecovery,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.dynamoDbConfig.pointInTimeRecovery,
+      },
       encryption: config.dynamoDbConfig.encryption 
         ? dynamodb.TableEncryption.AWS_MANAGED 
         : dynamodb.TableEncryption.DEFAULT,
@@ -111,7 +115,9 @@ export class DataStack extends Construct {
       billingMode: config.dynamoDbConfig.billingMode === 'PAY_PER_REQUEST' 
         ? dynamodb.BillingMode.PAY_PER_REQUEST 
         : dynamodb.BillingMode.PROVISIONED,
-      pointInTimeRecovery: config.dynamoDbConfig.pointInTimeRecovery,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.dynamoDbConfig.pointInTimeRecovery,
+      },
       encryption: config.dynamoDbConfig.encryption 
         ? dynamodb.TableEncryption.AWS_MANAGED 
         : dynamodb.TableEncryption.DEFAULT,
@@ -173,7 +179,9 @@ export class DataStack extends Construct {
       billingMode: config.dynamoDbConfig.billingMode === 'PAY_PER_REQUEST' 
         ? dynamodb.BillingMode.PAY_PER_REQUEST 
         : dynamodb.BillingMode.PROVISIONED,
-      pointInTimeRecovery: config.dynamoDbConfig.pointInTimeRecovery,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.dynamoDbConfig.pointInTimeRecovery,
+      },
       encryption: config.dynamoDbConfig.encryption 
         ? dynamodb.TableEncryption.AWS_MANAGED 
         : dynamodb.TableEncryption.DEFAULT,
@@ -234,7 +242,9 @@ export class DataStack extends Construct {
       billingMode: config.dynamoDbConfig.billingMode === 'PAY_PER_REQUEST' 
         ? dynamodb.BillingMode.PAY_PER_REQUEST 
         : dynamodb.BillingMode.PROVISIONED,
-      pointInTimeRecovery: config.dynamoDbConfig.pointInTimeRecovery,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.dynamoDbConfig.pointInTimeRecovery,
+      },
       encryption: config.dynamoDbConfig.encryption 
         ? dynamodb.TableEncryption.AWS_MANAGED 
         : dynamodb.TableEncryption.DEFAULT,
@@ -296,7 +306,9 @@ export class DataStack extends Construct {
       billingMode: config.dynamoDbConfig.billingMode === 'PAY_PER_REQUEST' 
         ? dynamodb.BillingMode.PAY_PER_REQUEST 
         : dynamodb.BillingMode.PROVISIONED,
-      pointInTimeRecovery: config.dynamoDbConfig.pointInTimeRecovery,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.dynamoDbConfig.pointInTimeRecovery,
+      },
       encryption: config.dynamoDbConfig.encryption 
         ? dynamodb.TableEncryption.AWS_MANAGED 
         : dynamodb.TableEncryption.DEFAULT,
@@ -368,7 +380,9 @@ export class DataStack extends Construct {
       billingMode: config.dynamoDbConfig.billingMode === 'PAY_PER_REQUEST' 
         ? dynamodb.BillingMode.PAY_PER_REQUEST 
         : dynamodb.BillingMode.PROVISIONED,
-      pointInTimeRecovery: config.dynamoDbConfig.pointInTimeRecovery,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.dynamoDbConfig.pointInTimeRecovery,
+      },
       encryption: config.dynamoDbConfig.encryption 
         ? dynamodb.TableEncryption.AWS_MANAGED 
         : dynamodb.TableEncryption.DEFAULT,
@@ -405,7 +419,9 @@ export class DataStack extends Construct {
       billingMode: config.dynamoDbConfig.billingMode === 'PAY_PER_REQUEST' 
         ? dynamodb.BillingMode.PAY_PER_REQUEST 
         : dynamodb.BillingMode.PROVISIONED,
-      pointInTimeRecovery: config.dynamoDbConfig.pointInTimeRecovery,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.dynamoDbConfig.pointInTimeRecovery,
+      },
       encryption: config.dynamoDbConfig.encryption 
         ? dynamodb.TableEncryption.AWS_MANAGED 
         : dynamodb.TableEncryption.DEFAULT,
@@ -442,7 +458,9 @@ export class DataStack extends Construct {
       billingMode: config.dynamoDbConfig.billingMode === 'PAY_PER_REQUEST' 
         ? dynamodb.BillingMode.PAY_PER_REQUEST 
         : dynamodb.BillingMode.PROVISIONED,
-      pointInTimeRecovery: config.dynamoDbConfig.pointInTimeRecovery,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.dynamoDbConfig.pointInTimeRecovery,
+      },
       encryption: config.dynamoDbConfig.encryption 
         ? dynamodb.TableEncryption.AWS_MANAGED 
         : dynamodb.TableEncryption.DEFAULT,
@@ -480,7 +498,9 @@ export class DataStack extends Construct {
       billingMode: config.dynamoDbConfig.billingMode === 'PAY_PER_REQUEST' 
         ? dynamodb.BillingMode.PAY_PER_REQUEST 
         : dynamodb.BillingMode.PROVISIONED,
-      pointInTimeRecovery: config.dynamoDbConfig.pointInTimeRecovery,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.dynamoDbConfig.pointInTimeRecovery,
+      },
       encryption: config.dynamoDbConfig.encryption 
         ? dynamodb.TableEncryption.AWS_MANAGED 
         : dynamodb.TableEncryption.DEFAULT,
@@ -531,7 +551,9 @@ export class DataStack extends Construct {
       billingMode: config.dynamoDbConfig.billingMode === 'PAY_PER_REQUEST' 
         ? dynamodb.BillingMode.PAY_PER_REQUEST 
         : dynamodb.BillingMode.PROVISIONED,
-      pointInTimeRecovery: config.dynamoDbConfig.pointInTimeRecovery,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: config.dynamoDbConfig.pointInTimeRecovery,
+      },
       encryption: config.dynamoDbConfig.encryption 
         ? dynamodb.TableEncryption.AWS_MANAGED 
         : dynamodb.TableEncryption.DEFAULT,

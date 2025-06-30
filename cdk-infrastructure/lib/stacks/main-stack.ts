@@ -101,7 +101,7 @@ export class MainStack extends cdk.Stack {
 
     // S3 Bucket outputs
     Object.entries(storageStack.buckets).forEach(([name, bucket]) => {
-      new cdk.CfnOutput(this, `${name}BucketName`, {
+      new cdk.CfnOutput(this, `${name}Bucket`, {
         value: bucket.bucketName,
         description: `${name} S3 Bucket name`,
         exportName: `${id}-${name}BucketName`,
@@ -110,13 +110,13 @@ export class MainStack extends cdk.Stack {
 
     // DynamoDB Table outputs
     Object.entries(dataStack.tables).forEach(([name, table]) => {
-      new cdk.CfnOutput(this, `${name}TableName`, {
+      new cdk.CfnOutput(this, `${name}Table`, {
         value: table.tableName,
         description: `${name} DynamoDB table name`,
         exportName: `${id}-${name}TableName`,
       });
 
-      new cdk.CfnOutput(this, `${name}TableArn`, {
+      new cdk.CfnOutput(this, `${name}TableArnOutput`, {
         value: table.tableArn,
         description: `${name} DynamoDB table ARN`,
         exportName: `${id}-${name}TableArn`,

@@ -7,6 +7,7 @@ import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import { EnvironmentConfig } from '../config/environments';
 import { LAMBDA_FUNCTION_NAMES } from '../config/constants';
@@ -38,7 +39,7 @@ export class AppSyncStack extends Construct {
     // GraphQL API
     this.api = new appsync.GraphqlApi(this, 'GraphQLAPI', {
       name: `${config.appSyncConfig.name}-${config.environment}`,
-      schema: appsync.SchemaFile.fromAsset(
+      definition: appsync.Definition.fromFile(
         path.join(__dirname, '../../schema/schema.graphql')
       ),
       authorizationConfig: {
@@ -140,11 +141,14 @@ export class AppSyncStack extends Construct {
       },
     });
 
-    // Lambda Layer for PowerTools
+    // Lambda PowerTools Layer - Get latest version from SSM Parameter Store
     const powerToolsLayer = lambda.LayerVersion.fromLayerVersionArn(
       this,
       'PowerToolsLayer',
-      `arn:aws:lambda:${cdk.Aws.REGION}:017000801446:layer:AWSLambdaPowertoolsTypeScriptV2:1`
+      ssm.StringParameter.valueForStringParameter(
+        this,
+        '/aws/service/powertools/typescript/generic/all/latest'
+      )
     );
 
     // Common Lambda configuration
