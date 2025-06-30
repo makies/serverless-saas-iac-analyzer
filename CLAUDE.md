@@ -31,20 +31,35 @@
 4. **管理者機能**: 複数顧客企業の複数システム・複数AWSアカウント情報の横断集計表示
 
 ## ユーザーロール
-- SystemAdmin: 全テナント管理権限
-- ClientAdmin: 自社テナント管理権限
-- ProjectManager: 担当案件の管理権限
-- Analyst: 担当案件の分析実行権限
-- Viewer: 担当案件の閲覧のみ権限
-- ClientEngineer: 顧客側エンジニア（特定案件のみ）
+- **SystemAdmin**: 全テナント管理権限、フレームワークマスター管理
+- **FrameworkAdmin**: フレームワーク定義・ルール管理権限
+- **ClientAdmin**: 自社テナント管理権限、フレームワーク設定
+- **ProjectManager**: 担当案件の管理権限、分析フレームワーク選択
+- **Analyst**: 担当案件の分析実行権限
+- **Viewer**: 担当案件の閲覧のみ権限
+- **ClientEngineer**: 顧客側エンジニア（特定案件のみ）
 
 ## 機能要件
 1. IaC分析機能（CloudFormation, Terraform, CDK対応）
-2. AWS Well-Architected Framework 6つの柱による分析
-3. ライブAWSアカウントスキャン機能
-4. レポート生成（PDF、Excel出力）
-5. プロジェクト切り替え機能
-6. 管理者向け横断分析機能
+2. **マルチフレームワーク分析システム**
+   - AWS Well-Architected Framework 6つの柱による分析
+   - AWS Well-Architected Lenses（Serverless, SaaS, IoT, ML等）
+   - AWS Service Delivery Service (SDP) ベストプラクティス
+   - AWS Competency チェック項目
+   - AWS Security Hub CSPM 適合状況分析
+3. **中央マスター管理システム**
+   - フレームワーク定義の中央管理
+   - ルール定義とバージョン管理
+   - テナント別フレームワーク設定
+4. ライブAWSアカウントスキャン機能
+5. レポート生成（PDF、Excel出力）
+6. プロジェクト切り替え機能
+7. **管理者向け横断分析機能**
+   - テナント横断メトリクス分析
+   - フレームワーク採用状況分析
+   - 業界別・ティア別ベンチマーク
+   - チャーンリスク予測
+   - カスタムレポート生成
 
 ## 制約事項
 - Basic Tier制約: 月100回分析、10MBファイル制限、90日保存
