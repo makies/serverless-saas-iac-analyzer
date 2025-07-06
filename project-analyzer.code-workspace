@@ -7,8 +7,11 @@
 	"settings": {
 		"cSpell.words": [
 			"eslintcache",
+			"eventbridge",
 			"OPFS",
 			"VARCHAR"
-		]
+		],
+		"files.autoSave": "afterDelay",
+		"workbench.colorTheme": "Next.js Monokai Classic"
 	}
 }

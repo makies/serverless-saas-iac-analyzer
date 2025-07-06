@@ -1,3 +1,76 @@
+[env]
+# .env に設定された環境変数を反映する
+mise.file = '.env'
+# 環境変数
+ENV_NAME = "dev"
+
+[settings]
+experimental = true
+disable_backends = ["asdf", "vfox"]
+
+[settings.pipx]
+uvx = true
+
 [tools]
+# [Node.js]
 node = "22"
-"npm:tsc" = "latest"
+ 
+# [Python/]
+uv = "latest"
+"pipx:cfn-lint" = "latest"
+"pipx:checkov" = "latest"
+
+[tasks]
+# Root project tasks
+"install" = "npm run install:all"
+"build" = "npm run build"
+"lint" = "npm run lint"
+"lint:fix" = "npm run lint:fix"
+"format" = "npm run format"
+"check" = "npm run check"
+"type-check" = "npm run type-check"
+"test" = "npm run test"
+
+# CDK specific tasks
+"cdk:build" = "cd cdk-infrastructure && npm run build"
+"cdk:watch" = "cd cdk-infrastructure && npm run watch"
+"cdk:test" = "cd cdk-infrastructure && npm run test"
+"cdk:test:watch" = "cd cdk-infrastructure && npm run test:watch"
+"cdk:synth" = "cd cdk-infrastructure && npm run synth"
+"cdk:deploy" = "cd cdk-infrastructure && npm run deploy"
+"cdk:deploy:all" = "cd cdk-infrastructure && npm run deploy:all"
+"cdk:destroy" = "cd cdk-infrastructure && npm run destroy"
+"cdk:diff" = "cd cdk-infrastructure && npm run diff"
+"cdk:lint" = "cd cdk-infrastructure && npm run lint"
+"cdk:lint:fix" = "cd cdk-infrastructure && npm run lint:fix"
+"cdk:format" = "cd cdk-infrastructure && npm run format"
+"cdk:typecheck" = "cd cdk-infrastructure && npm run typecheck"
+
+# CDK security tasks
+"cdk:diff:secure" = "cd cdk-infrastructure && npm run diff:secure"
+"cdk:synth:secure" = "cd cdk-infrastructure && npm run synth:secure"
+"cdk:deploy:secure" = "cd cdk-infrastructure && npm run deploy:secure"
+
+# Amplify tasks
+"amplify:sandbox" = "npm run amplify:sandbox"
+"amplify:deploy" = "npm run amplify:deploy"
+
+# Frontend tasks
+"frontend:dev" = "cd frontend && npm run dev"
+"frontend:build" = "cd frontend && npm run build"
+"frontend:lint" = "cd frontend && npm run lint"
+"frontend:lint:fix" = "cd frontend && npm run lint:fix"
+"frontend:format" = "cd frontend && npm run format"
+"frontend:check" = "cd frontend && npm run check"
+"frontend:type-check" = "cd frontend && npm run type-check"
+"frontend:test" = "cd frontend && npm run test"
+
+# Security and quality checks
+"security:cfn-lint" = "cfn-lint cdk-infrastructure/cdk.out/**/*.template.json"
+"security:checkov" = "checkov -d cdk-infrastructure/cdk.out --framework cloudformation"
+"security:all" = ["mise run security:cfn-lint", "mise run security:checkov"]
+
+# Development workflow
+"dev:setup" = ["mise install", "mise run install"]
+"dev:check" = ["mise run lint", "mise run type-check", "mise run test"]
+"dev:build:all" = ["mise run cdk:build", "mise run frontend:build"]

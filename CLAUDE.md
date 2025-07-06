@@ -18,7 +18,7 @@
 - API: API Gateway (REST)
 
 ## 開発要件
-- **Lambda Runtime**: Node.js 20.x（最新の安定版）
+- **Lambda Runtime**: Node.js 22.x（最新の安定版）
 - **TypeScript**: 5.x系最新
 - **CDK**: v2最新
 - **Linting**: ESLint + eslint-cdk-plugin + Prettier
