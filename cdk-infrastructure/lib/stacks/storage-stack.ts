@@ -212,24 +212,12 @@ export class StorageStack extends Construct {
     // S3バケットポリシーの条件キーに制限があるため、より詳細なアクセス制御は
     // Cognito Identity Pool のIAMロールで実装
 
-    // 最大ファイルサイズ制限（SBT Basic Tier: 10MB）
-    this.buckets.ApplicationData.addToResourcePolicy(
-      new iam.PolicyStatement({
-        sid: 'EnforceFileSizeLimit',
-        effect: iam.Effect.DENY,
-        principals: [new iam.AnyPrincipal()],
-        actions: ['s3:PutObject'],
-        resources: [this.buckets.ApplicationData.arnForObjects(`${S3_PREFIXES.ANALYSIS_INPUTS}/*`)],
-        conditions: {
-          NumericGreaterThan: {
-            's3:content-length': 10485760, // 10MB
-          },
-        },
-      })
-    );
+    // 最大ファイルサイズ制限は Lambda関数レベルで実装
+    // S3 バケットポリシーの条件キーでは直接的なコンテンツサイズ制限が困難なため
+    // アプリケーションロジックで制限を実装
   }
 
-  private setupEventNotifications(config: EnvironmentConfig) {
+  private setupEventNotifications(_config: EnvironmentConfig) {
     // 現在は設定なし（後でLambda関数が作成された後に設定）
     // EventBridge 統合は AppSync スタックで設定
   }
