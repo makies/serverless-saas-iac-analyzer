@@ -4,50 +4,35 @@
  */
 
 import { AppSyncResolverHandler } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand } from '@aws-sdk/lib-dynamodb';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import middy from '@middy/core';
+import { AppSyncIdentity, Project } from '../../shared/types/appsync';
+import { ddbDocClient } from '../../shared/utils/aws-clients';
 
 // Initialize PowerTools
 const logger = new Logger({ serviceName: 'ProjectService' });
 const tracer = new Tracer({ serviceName: 'ProjectService' });
 
-// Initialize DynamoDB
-const ddbClient = new DynamoDBClient({});
-const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
-
 interface GetProjectArgs {
   projectId: string;
 }
 
-interface Project {
-  projectId: string;
-  tenantId: string;
-  name: string;
-  description: string;
-  status: string;
-  settings: {
-    frameworks: string[];
-    analysisConfig: Record<string, any>;
-  };
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-}
+
 
 const getProject: AppSyncResolverHandler<GetProjectArgs, Project | null> = async (event) => {
   const { arguments: args, identity } = event;
   const { projectId } = args;
 
-  const userTenantId = (identity as any)?.claims?.['custom:tenantId'];
-  const userRole = (identity as any)?.claims?.['custom:role'];
+  const appSyncIdentity = identity as AppSyncIdentity;
+  const userTenantId = appSyncIdentity?.claims?.['custom:tenantId'];
+  const userRole = appSyncIdentity?.claims?.['custom:role'];
 
   logger.info('GetProject query started', {
-    userId: (identity as any)?.sub,
+    userId: appSyncIdentity?.sub,
     projectId,
     userTenantId,
     userRole,
@@ -88,11 +73,10 @@ const getProject: AppSyncResolverHandler<GetProjectArgs, Project | null> = async
     });
 
     return project;
-
-  } catch (error: any) {
-    logger.error('Error getting project', { 
-      error: error instanceof Error ? error.message : String(error), 
-      projectId 
+  } catch (error: unknown) {
+    logger.error('Error getting project', {
+      error: error instanceof Error ? error.message : String(error),
+      projectId,
     });
     throw new Error('Failed to get project');
   }

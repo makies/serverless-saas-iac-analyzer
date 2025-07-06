@@ -49,7 +49,7 @@ const listTenants: AppSyncResolverHandler<ListTenantsArgs, ListTenantsResponse> 
 
   // Authorization check - only SystemAdmin can list all tenants
   const userRole = (identity as any)?.claims?.['custom:role'];
-  
+
   if (userRole !== 'SystemAdmin') {
     throw new Error('Access denied: Only SystemAdmin can list all tenants');
   }
@@ -69,16 +69,18 @@ const listTenants: AppSyncResolverHandler<ListTenantsArgs, ListTenantsResponse> 
         ':skValue': '#METADATA',
       },
       Limit: limit,
-      ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined,
+      ExclusiveStartKey: nextToken
+        ? JSON.parse(Buffer.from(nextToken, 'base64').toString())
+        : undefined,
     });
 
     const result = await ddbDocClient.send(command);
-    
+
     const tenants = (result.Items || []) as Tenant[];
 
     const response: ListTenantsResponse = {
       tenants,
-      nextToken: result.LastEvaluatedKey 
+      nextToken: result.LastEvaluatedKey
         ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
         : undefined,
     };
@@ -89,9 +91,8 @@ const listTenants: AppSyncResolverHandler<ListTenantsArgs, ListTenantsResponse> 
     });
 
     return response;
-
   } catch (error: any) {
-    logger.error('Error listing tenants', { 
+    logger.error('Error listing tenants', {
       error: error instanceof Error ? error.message : String(error),
       limit,
     });

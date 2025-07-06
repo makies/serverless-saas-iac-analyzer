@@ -1,8 +1,20 @@
 import { APIGatewayProxyHandler, APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+  UpdateCommand,
+  DeleteCommand,
+  QueryCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
-import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminDeleteUserCommand, AdminAddUserToGroupCommand } from '@aws-sdk/client-cognito-identity-provider';
+import {
+  CognitoIdentityProviderClient,
+  AdminCreateUserCommand,
+  AdminDeleteUserCommand,
+  AdminAddUserToGroupCommand,
+} from '@aws-sdk/client-cognito-identity-provider';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
@@ -103,7 +115,6 @@ export const handler: APIGatewayProxyHandler = async (
 
     metrics.addMetric('RequestSuccess', MetricUnit.Count, 1);
     return result;
-
   } catch (error) {
     logger.error('Tenant management request failed', {
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -123,7 +134,6 @@ export const handler: APIGatewayProxyHandler = async (
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
     };
-
   } finally {
     subsegment?.close();
     metrics.publishStoredMetrics();
@@ -133,7 +143,9 @@ export const handler: APIGatewayProxyHandler = async (
 async function listTenants(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   const queryParams = event.queryStringParameters || {};
   const limit = queryParams.limit ? parseInt(queryParams.limit) : 50;
-  const lastEvaluatedKey = queryParams.nextToken ? JSON.parse(decodeURIComponent(queryParams.nextToken)) : undefined;
+  const lastEvaluatedKey = queryParams.nextToken
+    ? JSON.parse(decodeURIComponent(queryParams.nextToken))
+    : undefined;
   const status = queryParams.status;
 
   let queryCommand;
@@ -166,7 +178,7 @@ async function listTenants(event: APIGatewayProxyEvent): Promise<APIGatewayProxy
 
   const response = {
     tenants: result.Items || [],
-    nextToken: result.LastEvaluatedKey 
+    nextToken: result.LastEvaluatedKey
       ? encodeURIComponent(JSON.stringify(result.LastEvaluatedKey))
       : null,
   };
@@ -246,35 +258,40 @@ async function createTenant(event: APIGatewayProxyEvent): Promise<APIGatewayProx
   };
 
   // Save to DynamoDB
-  await dynamoClient.send(new PutCommand({
-    TableName: TENANTS_TABLE,
-    Item: tenantRecord,
-    ConditionExpression: 'attribute_not_exists(tenantId)',
-  }));
+  await dynamoClient.send(
+    new PutCommand({
+      TableName: TENANTS_TABLE,
+      Item: tenantRecord,
+      ConditionExpression: 'attribute_not_exists(tenantId)',
+    })
+  );
 
   // Create Cognito user for tenant admin
   try {
-    await cognitoClient.send(new AdminCreateUserCommand({
-      UserPoolId: USER_POOL_ID,
-      Username: adminEmail,
-      UserAttributes: [
-        { Name: 'email', Value: adminEmail },
-        { Name: 'email_verified', Value: 'true' },
-        { Name: 'custom:tenantId', Value: tenantId },
-        { Name: 'custom:role', Value: 'ClientAdmin' },
-        { Name: 'custom:projectIds', Value: '[]' },
-      ],
-      MessageAction: 'SUPPRESS', // We'll send custom invitation
-      TemporaryPassword: generateTemporaryPassword(),
-    }));
+    await cognitoClient.send(
+      new AdminCreateUserCommand({
+        UserPoolId: USER_POOL_ID,
+        Username: adminEmail,
+        UserAttributes: [
+          { Name: 'email', Value: adminEmail },
+          { Name: 'email_verified', Value: 'true' },
+          { Name: 'custom:tenantId', Value: tenantId },
+          { Name: 'custom:role', Value: 'ClientAdmin' },
+          { Name: 'custom:projectIds', Value: '[]' },
+        ],
+        MessageAction: 'SUPPRESS', // We'll send custom invitation
+        TemporaryPassword: generateTemporaryPassword(),
+      })
+    );
 
     // Add user to ClientAdmins group
-    await cognitoClient.send(new AdminAddUserToGroupCommand({
-      UserPoolId: USER_POOL_ID,
-      Username: adminEmail,
-      GroupName: 'ClientAdmins',
-    }));
-
+    await cognitoClient.send(
+      new AdminAddUserToGroupCommand({
+        UserPoolId: USER_POOL_ID,
+        Username: adminEmail,
+        GroupName: 'ClientAdmins',
+      })
+    );
   } catch (cognitoError) {
     logger.warn('Failed to create Cognito user', {
       tenantId,
@@ -309,10 +326,12 @@ async function createTenant(event: APIGatewayProxyEvent): Promise<APIGatewayProx
 }
 
 async function getTenant(tenantId: string): Promise<APIGatewayProxyResult> {
-  const result = await dynamoClient.send(new GetCommand({
-    TableName: TENANTS_TABLE,
-    Key: { tenantId },
-  }));
+  const result = await dynamoClient.send(
+    new GetCommand({
+      TableName: TENANTS_TABLE,
+      Key: { tenantId },
+    })
+  );
 
   if (!result.Item) {
     return {
@@ -338,7 +357,10 @@ async function getTenant(tenantId: string): Promise<APIGatewayProxyResult> {
   };
 }
 
-async function updateTenant(tenantId: string, event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+async function updateTenant(
+  tenantId: string,
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
   const body = JSON.parse(event.body || '{}');
   const { tenantName, status, settings } = body;
 
@@ -368,7 +390,8 @@ async function updateTenant(tenantId: string, event: APIGatewayProxyEvent): Prom
   expressionAttributeNames['#updatedAt'] = 'updatedAt';
   expressionAttributeValues[':updatedAt'] = new Date().toISOString();
 
-  if (updateExpression.length === 1) { // Only updatedAt
+  if (updateExpression.length === 1) {
+    // Only updatedAt
     return {
       statusCode: 400,
       headers: {
@@ -382,15 +405,17 @@ async function updateTenant(tenantId: string, event: APIGatewayProxyEvent): Prom
     };
   }
 
-  const result = await dynamoClient.send(new UpdateCommand({
-    TableName: TENANTS_TABLE,
-    Key: { tenantId },
-    UpdateExpression: `SET ${updateExpression.join(', ')}`,
-    ExpressionAttributeNames: expressionAttributeNames,
-    ExpressionAttributeValues: expressionAttributeValues,
-    ReturnValues: 'ALL_NEW',
-    ConditionExpression: 'attribute_exists(tenantId)',
-  }));
+  const result = await dynamoClient.send(
+    new UpdateCommand({
+      TableName: TENANTS_TABLE,
+      Key: { tenantId },
+      UpdateExpression: `SET ${updateExpression.join(', ')}`,
+      ExpressionAttributeNames: expressionAttributeNames,
+      ExpressionAttributeValues: expressionAttributeValues,
+      ReturnValues: 'ALL_NEW',
+      ConditionExpression: 'attribute_exists(tenantId)',
+    })
+  );
 
   // Publish tenant update event
   await publishTenantEvent('Tenant Updated', result.Attributes as TenantRecord);
@@ -410,10 +435,12 @@ async function updateTenant(tenantId: string, event: APIGatewayProxyEvent): Prom
 
 async function deleteTenant(tenantId: string): Promise<APIGatewayProxyResult> {
   // Get tenant before deletion for event publishing
-  const getResult = await dynamoClient.send(new GetCommand({
-    TableName: TENANTS_TABLE,
-    Key: { tenantId },
-  }));
+  const getResult = await dynamoClient.send(
+    new GetCommand({
+      TableName: TENANTS_TABLE,
+      Key: { tenantId },
+    })
+  );
 
   if (!getResult.Item) {
     return {
@@ -430,27 +457,31 @@ async function deleteTenant(tenantId: string): Promise<APIGatewayProxyResult> {
   }
 
   // Soft delete by updating status
-  await dynamoClient.send(new UpdateCommand({
-    TableName: TENANTS_TABLE,
-    Key: { tenantId },
-    UpdateExpression: 'SET #status = :status, #updatedAt = :updatedAt',
-    ExpressionAttributeNames: {
-      '#status': 'status',
-      '#updatedAt': 'updatedAt',
-    },
-    ExpressionAttributeValues: {
-      ':status': 'ARCHIVED',
-      ':updatedAt': new Date().toISOString(),
-    },
-  }));
+  await dynamoClient.send(
+    new UpdateCommand({
+      TableName: TENANTS_TABLE,
+      Key: { tenantId },
+      UpdateExpression: 'SET #status = :status, #updatedAt = :updatedAt',
+      ExpressionAttributeNames: {
+        '#status': 'status',
+        '#updatedAt': 'updatedAt',
+      },
+      ExpressionAttributeValues: {
+        ':status': 'ARCHIVED',
+        ':updatedAt': new Date().toISOString(),
+      },
+    })
+  );
 
   // Delete associated Cognito user
   try {
     const tenant = getResult.Item as TenantRecord;
-    await cognitoClient.send(new AdminDeleteUserCommand({
-      UserPoolId: USER_POOL_ID,
-      Username: tenant.adminEmail,
-    }));
+    await cognitoClient.send(
+      new AdminDeleteUserCommand({
+        UserPoolId: USER_POOL_ID,
+        Username: tenant.adminEmail,
+      })
+    );
   } catch (cognitoError) {
     logger.warn('Failed to delete Cognito user', {
       tenantId,
@@ -490,9 +521,11 @@ async function publishTenantEvent(eventType: string, tenant: TenantRecord): Prom
     EventBusName: EVENT_BUS_NAME,
   };
 
-  await eventBridgeClient.send(new PutEventsCommand({
-    Entries: [event],
-  }));
+  await eventBridgeClient.send(
+    new PutEventsCommand({
+      Entries: [event],
+    })
+  );
 
   logger.info('Published tenant event', {
     eventType,
@@ -505,18 +538,21 @@ function generateTemporaryPassword(): string {
   const length = 12;
   const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
   let password = '';
-  
+
   // Ensure at least one of each required character type
   password += 'A'; // uppercase
   password += 'a'; // lowercase
   password += '1'; // number
   password += '!'; // symbol
-  
+
   // Fill the rest randomly
   for (let i = 4; i < length; i++) {
     password += charset.charAt(Math.floor(Math.random() * charset.length));
   }
-  
+
   // Shuffle the password
-  return password.split('').sort(() => 0.5 - Math.random()).join('');
+  return password
+    .split('')
+    .sort(() => 0.5 - Math.random())
+    .join('');
 }

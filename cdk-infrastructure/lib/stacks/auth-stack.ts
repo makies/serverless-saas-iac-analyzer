@@ -45,18 +45,18 @@ export class AuthStack extends Construct {
         },
       },
       customAttributes: {
-        tenantId: new cognito.StringAttribute({ 
-          minLen: 1, 
+        tenantId: new cognito.StringAttribute({
+          minLen: 1,
           maxLen: 50,
           mutable: true,
         }),
-        role: new cognito.StringAttribute({ 
-          minLen: 1, 
+        role: new cognito.StringAttribute({
+          minLen: 1,
           maxLen: 50,
           mutable: true,
         }),
-        projectIds: new cognito.StringAttribute({ 
-          minLen: 0, 
+        projectIds: new cognito.StringAttribute({
+          minLen: 0,
           maxLen: 2000,
           mutable: true,
         }),
@@ -85,7 +85,7 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
 
 ご質問がございましたら、システム管理者までお問い合わせください。`,
         emailSubject: `${config.cognitoConfig.userPoolName}への招待`,
-        smsMessage: `${config.cognitoConfig.userPoolName}への招待 - ユーザー名: {username}, 一時パスワード: {####}`
+        smsMessage: `${config.cognitoConfig.userPoolName}への招待 - ユーザー名: {username}, 一時パスワード: {####}`,
       },
       autoVerify: {
         email: true,
@@ -109,13 +109,12 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
         otp: true,
       },
       deletionProtection: config.environment === 'prod',
-      removalPolicy: config.environment === 'prod' 
-        ? cdk.RemovalPolicy.RETAIN 
-        : cdk.RemovalPolicy.DESTROY,
+      removalPolicy:
+        config.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
 
     // User Pool Groups (ロールベース)
-    Object.values(USER_ROLES).forEach(role => {
+    Object.values(USER_ROLES).forEach((role) => {
       new cognito.CfnUserPoolGroup(this, `${role}Group`, {
         userPoolId: this.userPool.userPoolId,
         groupName: role,
@@ -140,21 +139,17 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
       accessTokenValidity: cdk.Duration.hours(1),
       idTokenValidity: cdk.Duration.hours(1),
       enableTokenRevocation: true,
-      supportedIdentityProviders: [
-        cognito.UserPoolClientIdentityProvider.COGNITO,
-      ],
+      supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
       oAuth: {
         flows: {
           authorizationCodeGrant: true,
           implicitCodeGrant: false,
         },
-        scopes: [
-          cognito.OAuthScope.EMAIL,
-          cognito.OAuthScope.OPENID,
-          cognito.OAuthScope.PROFILE,
-        ],
-        callbackUrls: config.cognitoConfig.allowedOrigins.map(origin => `${origin}/auth/callback`),
-        logoutUrls: config.cognitoConfig.allowedOrigins.map(origin => `${origin}/auth/logout`),
+        scopes: [cognito.OAuthScope.EMAIL, cognito.OAuthScope.OPENID, cognito.OAuthScope.PROFILE],
+        callbackUrls: config.cognitoConfig.allowedOrigins.map(
+          (origin) => `${origin}/auth/callback`
+        ),
+        logoutUrls: config.cognitoConfig.allowedOrigins.map((origin) => `${origin}/auth/logout`),
       },
       readAttributes: new cognito.ClientAttributes()
         .withStandardAttributes({
@@ -183,11 +178,13 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
     this.identityPool = new cognito.CfnIdentityPool(this, 'IdentityPool', {
       identityPoolName: `${config.cognitoConfig.userPoolName}Identity-${config.environment}`,
       allowUnauthenticatedIdentities: false,
-      cognitoIdentityProviders: [{
-        clientId: this.userPoolClient.userPoolClientId,
-        providerName: this.userPool.userPoolProviderName,
-        serverSideTokenCheck: true,
-      }],
+      cognitoIdentityProviders: [
+        {
+          clientId: this.userPoolClient.userPoolClientId,
+          providerName: this.userPool.userPoolProviderName,
+          serverSideTokenCheck: true,
+        },
+      ],
     });
 
     // IAM Roles for Identity Pool
@@ -205,19 +202,13 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
         },
         'sts:AssumeRoleWithWebIdentity'
       ),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AWSAppSyncInvokeFullAccess'),
-      ],
+      managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('AWSAppSyncInvokeFullAccess')],
       inlinePolicies: {
         S3Access: new iam.PolicyDocument({
           statements: [
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
-              actions: [
-                's3:GetObject',
-                's3:PutObject',
-                's3:DeleteObject',
-              ],
+              actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
               resources: [
                 // テナント固有のプレフィックスのみアクセス可能
                 `arn:aws:s3:::${config.s3Config.bucketName}-${config.environment}/tenants/\${cognito-identity.amazonaws.com:sub}/*`,
@@ -229,13 +220,8 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
           statements: [
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
-              actions: [
-                'cognito-idp:GetUser',
-                'cognito-idp:UpdateUserAttributes',
-              ],
-              resources: [
-                this.userPool.userPoolArn,
-              ],
+              actions: ['cognito-idp:GetUser', 'cognito-idp:UpdateUserAttributes'],
+              resources: [this.userPool.userPoolArn],
             }),
           ],
         }),

@@ -17,16 +17,16 @@ export class StorageStack extends Construct {
     super(scope, id);
 
     const { config } = props;
-    
+
     this.buckets = {};
 
     // メインアプリケーションバケット (環境ベースの安定した命名)
-    const bucketSuffix = config.environment;
+    const bucketSuffix = `${config.environment}-${cdk.Aws.ACCOUNT_ID}`;
     this.buckets.ApplicationData = new s3.Bucket(this, 'ApplicationDataBucket', {
       bucketName: `cloudbpa-app-${bucketSuffix}`,
       versioned: config.s3Config.versioning,
-      encryption: config.s3Config.encryption 
-        ? s3.BucketEncryption.S3_MANAGED 
+      encryption: config.s3Config.encryption
+        ? s3.BucketEncryption.S3_MANAGED
         : s3.BucketEncryption.UNENCRYPTED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       enforceSSL: true,
@@ -75,9 +75,8 @@ export class StorageStack extends Construct {
           maxAge: 3000,
         },
       ],
-      removalPolicy: config.environment === 'prod' 
-        ? cdk.RemovalPolicy.RETAIN 
-        : cdk.RemovalPolicy.DESTROY,
+      removalPolicy:
+        config.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: config.environment !== 'prod',
     });
 
@@ -126,9 +125,8 @@ export class StorageStack extends Construct {
           ],
         },
       ],
-      removalPolicy: config.environment === 'prod' 
-        ? cdk.RemovalPolicy.RETAIN 
-        : cdk.RemovalPolicy.DESTROY,
+      removalPolicy:
+        config.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
 
     // バックアップ用バケット（本番環境のみ）
@@ -167,7 +165,7 @@ export class StorageStack extends Construct {
     this.setupEventNotifications(config);
 
     // タグの追加
-    Object.values(this.buckets).forEach(bucket => {
+    Object.values(this.buckets).forEach((bucket) => {
       cdk.Tags.of(bucket).add('Environment', config.environment);
       cdk.Tags.of(bucket).add('Project', 'CloudBestPracticeAnalyzer');
       cdk.Tags.of(bucket).add('Service', 'Storage');
@@ -192,41 +190,43 @@ export class StorageStack extends Construct {
 
   private setupBucketPolicies(config: EnvironmentConfig) {
     // アプリケーションデータバケットのポリシー
-    this.buckets.ApplicationData.addToResourcePolicy(new iam.PolicyStatement({
-      sid: 'DenyInsecureConnections',
-      effect: iam.Effect.DENY,
-      principals: [new iam.AnyPrincipal()],
-      actions: ['s3:*'],
-      resources: [
-        this.buckets.ApplicationData.bucketArn,
-        this.buckets.ApplicationData.arnForObjects('*'),
-      ],
-      conditions: {
-        Bool: {
-          'aws:SecureTransport': 'false',
+    this.buckets.ApplicationData.addToResourcePolicy(
+      new iam.PolicyStatement({
+        sid: 'DenyInsecureConnections',
+        effect: iam.Effect.DENY,
+        principals: [new iam.AnyPrincipal()],
+        actions: ['s3:*'],
+        resources: [
+          this.buckets.ApplicationData.bucketArn,
+          this.buckets.ApplicationData.arnForObjects('*'),
+        ],
+        conditions: {
+          Bool: {
+            'aws:SecureTransport': 'false',
+          },
         },
-      },
-    }));
+      })
+    );
 
     // テナント境界の強制はIAMロールレベルで実施（バケットポリシーではなく）
     // S3バケットポリシーの条件キーに制限があるため、より詳細なアクセス制御は
     // Cognito Identity Pool のIAMロールで実装
 
     // 最大ファイルサイズ制限（SBT Basic Tier: 10MB）
-    this.buckets.ApplicationData.addToResourcePolicy(new iam.PolicyStatement({
-      sid: 'EnforceFileSizeLimit',
-      effect: iam.Effect.DENY,
-      principals: [new iam.AnyPrincipal()],
-      actions: ['s3:PutObject'],
-      resources: [
-        this.buckets.ApplicationData.arnForObjects(`${S3_PREFIXES.ANALYSIS_INPUTS}/*`),
-      ],
-      conditions: {
-        NumericGreaterThan: {
-          's3:content-length': 10485760, // 10MB
+    this.buckets.ApplicationData.addToResourcePolicy(
+      new iam.PolicyStatement({
+        sid: 'EnforceFileSizeLimit',
+        effect: iam.Effect.DENY,
+        principals: [new iam.AnyPrincipal()],
+        actions: ['s3:PutObject'],
+        resources: [this.buckets.ApplicationData.arnForObjects(`${S3_PREFIXES.ANALYSIS_INPUTS}/*`)],
+        conditions: {
+          NumericGreaterThan: {
+            's3:content-length': 10485760, // 10MB
+          },
         },
-      },
-    }));
+      })
+    );
   }
 
   private setupEventNotifications(config: EnvironmentConfig) {

@@ -35,7 +35,10 @@ interface ListFrameworkRulesResult {
   nextToken?: string;
 }
 
-const listFrameworkRules: AppSyncResolverHandler<ListFrameworkRulesArgs, ListFrameworkRulesResult> = async (event) => {
+const listFrameworkRules: AppSyncResolverHandler<
+  ListFrameworkRulesArgs,
+  ListFrameworkRulesResult
+> = async (event) => {
   const { arguments: args, identity } = event;
   const { frameworkId, pillar, severity, category, limit = 50, nextToken } = args;
 
@@ -121,7 +124,6 @@ const listFrameworkRules: AppSyncResolverHandler<ListFrameworkRulesArgs, ListFra
       items,
       nextToken: responseNextToken,
     };
-
   } catch (error) {
     logger.error('Error listing framework rules', { error, frameworkId });
     throw new Error('Failed to list framework rules');

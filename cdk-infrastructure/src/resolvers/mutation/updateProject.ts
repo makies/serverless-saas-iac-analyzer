@@ -157,16 +157,15 @@ const updateProject: AppSyncResolverHandler<UpdateProjectArgs, Project> = async 
     });
 
     return updatedProject;
-
   } catch (error: any) {
     if (error.name === 'ConditionalCheckFailedException') {
       logger.error('Project not found', { projectId });
       throw new Error(`Project '${projectId}' not found`);
     }
 
-    logger.error('Error updating project', { 
-      error: error instanceof Error ? error.message : String(error), 
-      projectId 
+    logger.error('Error updating project', {
+      error: error instanceof Error ? error.message : String(error),
+      projectId,
     });
     throw new Error('Failed to update project');
   }

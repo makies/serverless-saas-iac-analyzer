@@ -5,15 +5,17 @@ import { TenantContext } from '../../../lib/config/types';
 /**
  * AppSync Event から テナントコンテキストを抽出
  */
-export async function extractTenantContext(event: AppSyncResolverEvent<any>): Promise<TenantContext> {
+export async function extractTenantContext(
+  event: AppSyncResolverEvent<any>
+): Promise<TenantContext> {
   const identity = event.identity as any;
-  
+
   if (!identity || !identity.claims) {
     throw new Error('No authentication context found');
   }
 
   const { claims } = identity;
-  
+
   // Cognito JWT クレームからテナント情報を抽出
   const tenantId = claims['custom:tenantId'];
   const role = claims['custom:role'];
@@ -71,10 +73,7 @@ export function validateTenantBoundary(
 /**
  * プロジェクトアクセス権限の検証
  */
-export function validateProjectAccess(
-  tenantContext: TenantContext,
-  projectId: string
-): void {
+export function validateProjectAccess(tenantContext: TenantContext, projectId: string): void {
   // システム管理者とテナント管理者は全プロジェクトにアクセス可能
   if (['SystemAdmin', 'ClientAdmin'].includes(tenantContext.role)) {
     return;

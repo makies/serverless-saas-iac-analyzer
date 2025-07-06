@@ -157,7 +157,7 @@ const generateReport: AppSyncResolverHandler<GenerateReportArgs, Report> = async
         reportId,
         error: generationError instanceof Error ? generationError.message : String(generationError),
       });
-      
+
       // Update status to failed
       report.status = 'FAILED';
       report.updatedAt = new Date().toISOString();
@@ -172,9 +172,8 @@ const generateReport: AppSyncResolverHandler<GenerateReportArgs, Report> = async
     });
 
     return report;
-
   } catch (error: any) {
-    logger.error('Error generating report', { 
+    logger.error('Error generating report', {
       error: error instanceof Error ? error.message : String(error),
       analysisId,
       format,
@@ -186,11 +185,11 @@ const generateReport: AppSyncResolverHandler<GenerateReportArgs, Report> = async
 // Helper function to generate report content
 async function generateReportContent(report: Report, analysis: any): Promise<void> {
   const { reportId, format, tenantId } = report;
-  
+
   // Generate mock report content based on format
   let content: string | Buffer;
   let contentType: string;
-  
+
   switch (format.toLowerCase()) {
     case 'pdf':
       content = `Mock PDF Report for Analysis ${analysis.analysisId}`;
@@ -201,14 +200,18 @@ async function generateReportContent(report: Report, analysis: any): Promise<voi
       contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
       break;
     case 'json':
-      content = JSON.stringify({
-        reportId,
-        analysisId: analysis.analysisId,
-        summary: analysis.results?.summary || {},
-        findings: analysis.results?.findings || [],
-        recommendations: analysis.results?.recommendations || [],
-        generatedAt: new Date().toISOString(),
-      }, null, 2);
+      content = JSON.stringify(
+        {
+          reportId,
+          analysisId: analysis.analysisId,
+          summary: analysis.results?.summary || {},
+          findings: analysis.results?.findings || [],
+          recommendations: analysis.results?.recommendations || [],
+          generatedAt: new Date().toISOString(),
+        },
+        null,
+        2
+      );
       contentType = 'application/json';
       break;
     default:
@@ -217,7 +220,7 @@ async function generateReportContent(report: Report, analysis: any): Promise<voi
 
   // Upload to S3
   const s3Key = `reports/${tenantId}/${reportId}/${reportId}.${format.toLowerCase()}`;
-  
+
   const s3Command = new PutObjectCommand({
     Bucket: process.env.APPLICATION_DATA_BUCKET!,
     Key: s3Key,

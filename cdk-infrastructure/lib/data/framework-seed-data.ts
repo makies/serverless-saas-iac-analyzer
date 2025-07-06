@@ -1,5 +1,5 @@
 // Framework Registry Seed Data for Multi-Framework Analysis System
-import { FRAMEWORK_TYPES, FRAMEWORK_STATUS, SEVERITY_LEVELS } from '../config/constants';
+import { FRAMEWORK_TYPES, FRAMEWORK_STATUS } from '../config/constants';
 import { FrameworkRegistryItem, RuleDefinitionItem } from '../config/multi-framework-types';
 
 export const FRAMEWORK_REGISTRY_SEED_DATA: FrameworkRegistryItem[] = [
@@ -11,7 +11,8 @@ export const FRAMEWORK_REGISTRY_SEED_DATA: FrameworkRegistryItem[] = [
     frameworkId: 'wa-framework-2023',
     name: 'AWS Well-Architected Framework',
     version: '2023.10',
-    description: 'The AWS Well-Architected Framework helps you understand the pros and cons of decisions you make while building systems on AWS.',
+    description:
+      'The AWS Well-Architected Framework helps you understand the pros and cons of decisions you make while building systems on AWS.',
     status: 'ACTIVE',
     category: 'Architecture Review',
     provider: 'AWS',
@@ -19,20 +20,20 @@ export const FRAMEWORK_REGISTRY_SEED_DATA: FrameworkRegistryItem[] = [
     checksCount: 547,
     pillars: [
       'OPERATIONAL_EXCELLENCE',
-      'SECURITY', 
+      'SECURITY',
       'RELIABILITY',
       'PERFORMANCE_EFFICIENCY',
       'COST_OPTIMIZATION',
-      'SUSTAINABILITY'
+      'SUSTAINABILITY',
     ],
     metadata: {
       complexity: 'INTERMEDIATE',
       estimatedTimeMinutes: 120,
       prerequisites: ['Basic AWS knowledge'],
-      tags: ['architecture', 'best-practices', 'aws']
+      tags: ['architecture', 'best-practices', 'aws'],
     },
     GSI1PK: `STATUS#${FRAMEWORK_STATUS.ACTIVE}`,
-    GSI1SK: `TYPE#${FRAMEWORK_TYPES.WA_FRAMEWORK}#NAME#AWS Well-Architected Framework`
+    GSI1SK: `TYPE#${FRAMEWORK_TYPES.WA_FRAMEWORK}#NAME#AWS Well-Architected Framework`,
   },
 
   // Serverless Applications Lens
@@ -43,7 +44,8 @@ export const FRAMEWORK_REGISTRY_SEED_DATA: FrameworkRegistryItem[] = [
     frameworkId: 'serverless-lens-2024',
     name: 'Serverless Applications Lens',
     version: '2.0',
-    description: 'The Serverless Application Lens focuses on how to design, deploy, and architect your serverless application workloads in the AWS Cloud.',
+    description:
+      'The Serverless Application Lens focuses on how to design, deploy, and architect your serverless application workloads in the AWS Cloud.',
     status: 'ACTIVE',
     category: 'Serverless Architecture',
     provider: 'AWS',
@@ -52,21 +54,21 @@ export const FRAMEWORK_REGISTRY_SEED_DATA: FrameworkRegistryItem[] = [
     pillars: [
       'OPERATIONAL_EXCELLENCE',
       'SECURITY',
-      'RELIABILITY', 
+      'RELIABILITY',
       'PERFORMANCE_EFFICIENCY',
-      'COST_OPTIMIZATION'
+      'COST_OPTIMIZATION',
     ],
     metadata: {
       complexity: 'ADVANCED',
       estimatedTimeMinutes: 90,
       prerequisites: ['Serverless architecture knowledge', 'Lambda experience'],
-      tags: ['serverless', 'lambda', 'microservices']
+      tags: ['serverless', 'lambda', 'microservices'],
     },
     GSI1PK: `STATUS#${FRAMEWORK_STATUS.ACTIVE}`,
-    GSI1SK: `TYPE#${FRAMEWORK_TYPES.WA_LENSES}#NAME#Serverless Applications Lens`
+    GSI1SK: `TYPE#${FRAMEWORK_TYPES.WA_LENSES}#NAME#Serverless Applications Lens`,
   },
 
-  // SaaS Applications Lens  
+  // SaaS Applications Lens
   {
     pk: `FRAMEWORK#${FRAMEWORK_TYPES.WA_LENSES}`,
     sk: '#saas-lens-2024',
@@ -74,7 +76,8 @@ export const FRAMEWORK_REGISTRY_SEED_DATA: FrameworkRegistryItem[] = [
     frameworkId: 'saas-lens-2024',
     name: 'SaaS Applications Lens',
     version: '1.1',
-    description: 'The SaaS Lens focuses on how to design, deploy, and architect your Software as a Service (SaaS) workloads in the AWS Cloud.',
+    description:
+      'The SaaS Lens focuses on how to design, deploy, and architect your Software as a Service (SaaS) workloads in the AWS Cloud.',
     status: 'BETA',
     category: 'SaaS Architecture',
     provider: 'AWS',
@@ -84,17 +87,17 @@ export const FRAMEWORK_REGISTRY_SEED_DATA: FrameworkRegistryItem[] = [
       'OPERATIONAL_EXCELLENCE',
       'SECURITY',
       'RELIABILITY',
-      'PERFORMANCE_EFFICIENCY', 
-      'COST_OPTIMIZATION'
+      'PERFORMANCE_EFFICIENCY',
+      'COST_OPTIMIZATION',
     ],
     metadata: {
       complexity: 'ADVANCED',
       estimatedTimeMinutes: 85,
       prerequisites: ['Multi-tenancy knowledge', 'SaaS architecture experience'],
-      tags: ['saas', 'multi-tenancy', 'isolation']
+      tags: ['saas', 'multi-tenancy', 'isolation'],
     },
     GSI1PK: `STATUS#${FRAMEWORK_STATUS.BETA}`,
-    GSI1SK: `TYPE#${FRAMEWORK_TYPES.WA_LENSES}#NAME#SaaS Applications Lens`
+    GSI1SK: `TYPE#${FRAMEWORK_TYPES.WA_LENSES}#NAME#SaaS Applications Lens`,
   },
 
   // Security Hub CSPM Controls
@@ -105,7 +108,8 @@ export const FRAMEWORK_REGISTRY_SEED_DATA: FrameworkRegistryItem[] = [
     frameworkId: 'security-hub-cspm',
     name: 'AWS Security Hub CSPM Controls',
     version: 'Latest',
-    description: 'Cloud Security Posture Management controls from AWS Security Hub for continuous compliance monitoring.',
+    description:
+      'Cloud Security Posture Management controls from AWS Security Hub for continuous compliance monitoring.',
     status: 'ACTIVE',
     category: 'Security Compliance',
     provider: 'AWS',
@@ -115,10 +119,10 @@ export const FRAMEWORK_REGISTRY_SEED_DATA: FrameworkRegistryItem[] = [
       complexity: 'INTERMEDIATE',
       estimatedTimeMinutes: 60,
       prerequisites: ['Security Hub knowledge', 'Compliance requirements'],
-      tags: ['security', 'compliance', 'cspm', 'monitoring']
+      tags: ['security', 'compliance', 'cspm', 'monitoring'],
     },
     GSI1PK: `STATUS#${FRAMEWORK_STATUS.ACTIVE}`,
-    GSI1SK: `TYPE#${FRAMEWORK_TYPES.CSPM}#NAME#AWS Security Hub CSPM Controls`
+    GSI1SK: `TYPE#${FRAMEWORK_TYPES.CSPM}#NAME#AWS Security Hub CSPM Controls`,
   },
 
   // AWS Service Delivery Program
@@ -129,7 +133,8 @@ export const FRAMEWORK_REGISTRY_SEED_DATA: FrameworkRegistryItem[] = [
     frameworkId: 'aws-sdp-2024',
     name: 'AWS Service Delivery Program Requirements',
     version: '2024.1',
-    description: 'Requirements and best practices for AWS Service Delivery Partners to deliver consistent, high-quality services.',
+    description:
+      'Requirements and best practices for AWS Service Delivery Partners to deliver consistent, high-quality services.',
     status: 'ACTIVE',
     category: 'Partner Requirements',
     provider: 'AWS',
@@ -139,11 +144,11 @@ export const FRAMEWORK_REGISTRY_SEED_DATA: FrameworkRegistryItem[] = [
       complexity: 'INTERMEDIATE',
       estimatedTimeMinutes: 75,
       prerequisites: ['AWS Partner Network membership', 'Service delivery experience'],
-      tags: ['partner', 'service-delivery', 'quality-assurance']
+      tags: ['partner', 'service-delivery', 'quality-assurance'],
     },
     GSI1PK: `STATUS#${FRAMEWORK_STATUS.ACTIVE}`,
-    GSI1SK: `TYPE#${FRAMEWORK_TYPES.SDP}#NAME#AWS Service Delivery Program Requirements`
-  }
+    GSI1SK: `TYPE#${FRAMEWORK_TYPES.SDP}#NAME#AWS Service Delivery Program Requirements`,
+  },
 ];
 
 export const RULE_DEFINITIONS_SEED_DATA: RuleDefinitionItem[] = [
@@ -155,7 +160,8 @@ export const RULE_DEFINITIONS_SEED_DATA: RuleDefinitionItem[] = [
     ruleId: 'WA-OPS-01',
     pillar: 'OPERATIONAL_EXCELLENCE',
     title: 'Use Infrastructure as Code',
-    description: 'Use infrastructure as code to define your infrastructure and deploy it consistently across environments.',
+    description:
+      'Use infrastructure as code to define your infrastructure and deploy it consistently across environments.',
     severity: 'HIGH',
     category: 'Infrastructure Management',
     checkType: 'CODE_ANALYSIS',
@@ -165,34 +171,35 @@ export const RULE_DEFINITIONS_SEED_DATA: RuleDefinitionItem[] = [
         checks: [
           {
             condition: 'EXISTS',
-            message: 'Infrastructure should be defined using CloudFormation templates'
-          }
-        ]
+            message: 'Infrastructure should be defined using CloudFormation templates',
+          },
+        ],
       },
       terraform: {
         resourceTypes: ['terraform'],
         checks: [
           {
             condition: 'EXISTS',
-            message: 'Infrastructure should be defined using Terraform configuration'
-          }
-        ]
+            message: 'Infrastructure should be defined using Terraform configuration',
+          },
+        ],
       },
       cdk: {
         resourceTypes: ['AWS::CDK::Stack'],
         checks: [
           {
             condition: 'EXISTS',
-            message: 'Infrastructure should be defined using AWS CDK'
-          }
-        ]
-      }
+            message: 'Infrastructure should be defined using AWS CDK',
+          },
+        ],
+      },
     },
     remediation: {
-      description: 'Define infrastructure using CloudFormation, Terraform, or CDK instead of manual configuration.',
+      description:
+        'Define infrastructure using CloudFormation, Terraform, or CDK instead of manual configuration.',
       links: [
         'https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/',
-        'https://docs.aws.amazon.com/cdk/'
+        'https://docs.aws.amazon.com/cdk/',
       ],
       effort: 'MEDIUM',
       automatable: true,
@@ -200,11 +207,11 @@ export const RULE_DEFINITIONS_SEED_DATA: RuleDefinitionItem[] = [
         'Choose an IaC tool (CloudFormation, Terraform, or CDK)',
         'Define infrastructure resources in code',
         'Implement CI/CD pipeline for deployment',
-        'Test infrastructure changes in non-production environments'
-      ]
+        'Test infrastructure changes in non-production environments',
+      ],
     },
     GSI1PK: 'FRAMEWORK#wa-framework-2023',
-    GSI1SK: 'PILLAR#OPERATIONAL_EXCELLENCE#SEVERITY#HIGH'
+    GSI1SK: 'PILLAR#OPERATIONAL_EXCELLENCE#SEVERITY#HIGH',
   },
 
   // Serverless Lens Sample Rules
@@ -226,33 +233,31 @@ export const RULE_DEFINITIONS_SEED_DATA: RuleDefinitionItem[] = [
           {
             property: 'MemorySize',
             condition: 'EXISTS',
-            message: 'Lambda function memory size should be explicitly configured'
+            message: 'Lambda function memory size should be explicitly configured',
           },
           {
             property: 'MemorySize',
             condition: 'REGEX',
             value: '^(128|256|512|1024|1536|2048|3008)$',
-            message: 'Lambda memory should be optimized based on performance testing'
-          }
-        ]
-      }
+            message: 'Lambda memory should be optimized based on performance testing',
+          },
+        ],
+      },
     },
     remediation: {
       description: 'Use AWS Lambda Power Tuning to find optimal memory configuration.',
-      links: [
-        'https://github.com/alexcasalboni/aws-lambda-power-tuning'
-      ],
+      links: ['https://github.com/alexcasalboni/aws-lambda-power-tuning'],
       effort: 'LOW',
       automatable: true,
       steps: [
         'Deploy AWS Lambda Power Tuning tool',
-        'Run performance tests with different memory configurations', 
+        'Run performance tests with different memory configurations',
         'Analyze cost vs performance trade-offs',
-        'Update Lambda function memory configuration'
-      ]
+        'Update Lambda function memory configuration',
+      ],
     },
     GSI1PK: 'FRAMEWORK#serverless-lens-2024',
-    GSI1SK: 'PILLAR#PERFORMANCE_EFFICIENCY#SEVERITY#MEDIUM'
+    GSI1SK: 'PILLAR#PERFORMANCE_EFFICIENCY#SEVERITY#MEDIUM',
   },
 
   // Security Hub CSPM Sample Rule
@@ -275,15 +280,15 @@ export const RULE_DEFINITIONS_SEED_DATA: RuleDefinitionItem[] = [
           {
             condition: 'NOT_CONTAINS',
             value: 'AllUsers',
-            message: 'S3 bucket should not grant public read access'
-          }
-        ]
-      }
+            message: 'S3 bucket should not grant public read access',
+          },
+        ],
+      },
     },
     remediation: {
       description: 'Remove public read access from S3 bucket ACL and bucket policy.',
       links: [
-        'https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html'
+        'https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html',
       ],
       effort: 'LOW',
       automatable: true,
@@ -291,10 +296,10 @@ export const RULE_DEFINITIONS_SEED_DATA: RuleDefinitionItem[] = [
         'Review bucket access requirements',
         'Remove public read permissions from bucket ACL',
         'Update bucket policy to remove public access',
-        'Enable S3 Block Public Access if appropriate'
-      ]
+        'Enable S3 Block Public Access if appropriate',
+      ],
     },
     GSI1PK: 'FRAMEWORK#security-hub-cspm',
-    GSI1SK: 'PILLAR#SECURITY#SEVERITY#CRITICAL'
-  }
+    GSI1SK: 'PILLAR#SECURITY#SEVERITY#CRITICAL',
+  },
 ];

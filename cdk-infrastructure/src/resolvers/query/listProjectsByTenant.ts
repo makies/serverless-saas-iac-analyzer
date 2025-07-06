@@ -41,7 +41,10 @@ interface ListProjectsResponse {
   nextToken?: string;
 }
 
-const listProjectsByTenant: AppSyncResolverHandler<ListProjectsByTenantArgs, ListProjectsResponse> = async (event) => {
+const listProjectsByTenant: AppSyncResolverHandler<
+  ListProjectsByTenantArgs,
+  ListProjectsResponse
+> = async (event) => {
   const { arguments: args, identity } = event;
   const { tenantId, limit = 20, nextToken } = args;
 
@@ -72,16 +75,18 @@ const listProjectsByTenant: AppSyncResolverHandler<ListProjectsByTenantArgs, Lis
       },
       ScanIndexForward: false, // Sort by createdAt descending
       Limit: limit,
-      ExclusiveStartKey: nextToken ? JSON.parse(Buffer.from(nextToken, 'base64').toString()) : undefined,
+      ExclusiveStartKey: nextToken
+        ? JSON.parse(Buffer.from(nextToken, 'base64').toString())
+        : undefined,
     });
 
     const result = await ddbDocClient.send(command);
-    
+
     const projects = (result.Items || []) as Project[];
 
     const response: ListProjectsResponse = {
       projects,
-      nextToken: result.LastEvaluatedKey 
+      nextToken: result.LastEvaluatedKey
         ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
         : undefined,
     };
@@ -93,9 +98,8 @@ const listProjectsByTenant: AppSyncResolverHandler<ListProjectsByTenantArgs, Lis
     });
 
     return response;
-
   } catch (error: any) {
-    logger.error('Error listing projects by tenant', { 
+    logger.error('Error listing projects by tenant', {
       error: error instanceof Error ? error.message : String(error),
       tenantId,
       limit,

@@ -97,11 +97,10 @@ const getAnalysis: AppSyncResolverHandler<GetAnalysisArgs, Analysis | null> = as
     });
 
     return analysis;
-
   } catch (error: any) {
-    logger.error('Error getting analysis', { 
-      error: error instanceof Error ? error.message : String(error), 
-      analysisId 
+    logger.error('Error getting analysis', {
+      error: error instanceof Error ? error.message : String(error),
+      analysisId,
     });
     throw new Error('Failed to get analysis');
   }

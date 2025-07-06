@@ -4,55 +4,37 @@
  */
 
 import { AppSyncResolverHandler } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import middy from '@middy/core';
 import { v4 as uuidv4 } from 'uuid';
+import { AppSyncIdentity, Project, ProjectSettings } from '../../shared/types/appsync';
+import { ddbDocClient } from '../../shared/utils/aws-clients';
 
 // Initialize PowerTools
 const logger = new Logger({ serviceName: 'ProjectService' });
 const tracer = new Tracer({ serviceName: 'ProjectService' });
 
-// Initialize DynamoDB
-const ddbClient = new DynamoDBClient({});
-const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
-
 interface CreateProjectArgs {
   tenantId: string;
   name: string;
   description: string;
-  settings?: {
-    frameworks?: string[];
-    analysisConfig?: Record<string, any>;
-  };
+  settings?: Partial<ProjectSettings>;
 }
 
-interface Project {
-  projectId: string;
-  tenantId: string;
-  name: string;
-  description: string;
-  status: string;
-  settings: {
-    frameworks: string[];
-    analysisConfig: Record<string, any>;
-  };
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-}
+
 
 const createProject: AppSyncResolverHandler<CreateProjectArgs, Project> = async (event) => {
   const { arguments: args, identity } = event;
   const { tenantId, name, description, settings = {} } = args;
 
-  const userTenantId = (identity as any)?.claims?.['custom:tenantId'];
-  const userRole = (identity as any)?.claims?.['custom:role'];
-  const userId = (identity as any)?.sub;
+  const appSyncIdentity = identity as AppSyncIdentity;
+  const userTenantId = appSyncIdentity?.claims?.['custom:tenantId'];
+  const userRole = appSyncIdentity?.claims?.['custom:role'];
+  const userId = appSyncIdentity?.sub;
 
   // Tenant isolation check
   if (userRole !== 'SystemAdmin' && userTenantId !== tenantId) {
@@ -76,7 +58,7 @@ const createProject: AppSyncResolverHandler<CreateProjectArgs, Project> = async 
       tenantId,
       name,
       description,
-      status: 'ACTIVE',
+      status: 'ACTIVE' as const,
       settings: {
         frameworks: settings.frameworks || ['wa-framework'],
         analysisConfig: settings.analysisConfig || {},
@@ -109,14 +91,13 @@ const createProject: AppSyncResolverHandler<CreateProjectArgs, Project> = async 
     });
 
     return project;
-
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error.name === 'ConditionalCheckFailedException') {
       logger.error('Project already exists', { projectId, tenantId });
       throw new Error('Project already exists');
     }
 
-    logger.error('Error creating project', { 
+    logger.error('Error creating project', {
       error: error instanceof Error ? error.message : String(error),
       tenantId,
       projectName: name,

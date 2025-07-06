@@ -3,7 +3,7 @@
     "target": "ES2022",
     "lib": ["ES2022", "DOM"],
     "types": ["node"],
-    "module": "commonjs",
+    "module": "CommonJS",
     "moduleResolution": "node",
     "declaration": true,
     "strict": true,
@@ -34,13 +34,14 @@
     "outDir": "./dist",
     "rootDir": "."
   },
-  "include": [
-    "**/*.ts"
-  ],
+  "include": ["**/*.ts"],
   "exclude": [
     "node_modules",
     "**/*.d.ts",
     "dist",
-    "cdk.out"
+    "cdk.out",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

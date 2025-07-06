@@ -117,11 +117,12 @@ const startAnalysis: AppSyncResolverHandler<StartAnalysisArgs, Analysis> = async
     };
 
     // Start Step Function execution (for now, we'll simulate this)
-    const stateMachineArn = process.env.ANALYSIS_STATE_MACHINE_ARN || 
+    const stateMachineArn =
+      process.env.ANALYSIS_STATE_MACHINE_ARN ||
       `arn:aws:states:us-east-1:123456789012:stateMachine:AnalysisWorkflow-${process.env.ENVIRONMENT}`;
-    
+
     let executionArn: string;
-    
+
     try {
       const startExecutionCommand = new StartExecutionCommand({
         stateMachineArn,
@@ -131,7 +132,7 @@ const startAnalysis: AppSyncResolverHandler<StartAnalysisArgs, Analysis> = async
 
       const executionResult = await sfnClient.send(startExecutionCommand);
       executionArn = executionResult.executionArn!;
-      
+
       logger.info('Step Function execution started', {
         analysisId,
         executionArn,
@@ -143,7 +144,7 @@ const startAnalysis: AppSyncResolverHandler<StartAnalysisArgs, Analysis> = async
         analysisId,
         error: sfnError instanceof Error ? sfnError.message : String(sfnError),
       });
-      
+
       executionArn = `arn:aws:states:us-east-1:123456789012:execution:AnalysisWorkflow-${process.env.ENVIRONMENT}:analysis-${analysisId}-${Date.now()}`;
     }
 
@@ -185,16 +186,15 @@ const startAnalysis: AppSyncResolverHandler<StartAnalysisArgs, Analysis> = async
     });
 
     return updatedAnalysis;
-
   } catch (error: any) {
     if (error.name === 'ConditionalCheckFailedException') {
       logger.error('Analysis not found', { analysisId });
       throw new Error(`Analysis '${analysisId}' not found`);
     }
 
-    logger.error('Error starting analysis', { 
-      error: error instanceof Error ? error.message : String(error), 
-      analysisId 
+    logger.error('Error starting analysis', {
+      error: error instanceof Error ? error.message : String(error),
+      analysisId,
     });
     throw new Error('Failed to start analysis');
   }

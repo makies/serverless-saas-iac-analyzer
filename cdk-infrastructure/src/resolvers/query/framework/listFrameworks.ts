@@ -34,7 +34,9 @@ interface ListFrameworksResult {
   nextToken?: string;
 }
 
-const listFrameworks: AppSyncResolverHandler<ListFrameworksArgs, ListFrameworksResult> = async (event) => {
+const listFrameworks: AppSyncResolverHandler<ListFrameworksArgs, ListFrameworksResult> = async (
+  event
+) => {
   const { arguments: args, identity } = event;
   const { status = FRAMEWORK_STATUS.ACTIVE, frameworkType, limit = 20, nextToken } = args;
 
@@ -98,9 +100,10 @@ const listFrameworks: AppSyncResolverHandler<ListFrameworksArgs, ListFrameworksR
       items,
       nextToken: responseNextToken,
     };
-
   } catch (error) {
-    logger.error('Error listing frameworks', { error: error instanceof Error ? error.message : String(error) });
+    logger.error('Error listing frameworks', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     throw new Error('Failed to list frameworks');
   }
 };

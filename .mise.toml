@@ -1,0 +1,5 @@
+[env]
+# .env に設定された環境変数を反映する
+mise.file = '.env'
+# 環境変数
+ENV_NAME = "dev"

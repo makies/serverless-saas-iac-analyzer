@@ -6,6 +6,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as rum from 'aws-cdk-lib/aws-rum';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { EnvironmentConfig } from '../config/environments';
 import { CLOUDWATCH_METRICS } from '../config/constants';
@@ -20,6 +22,7 @@ export interface MonitoringStackProps {
 export class MonitoringStack extends Construct {
   public readonly dashboard: cloudwatch.Dashboard;
   public readonly alarmTopic: sns.Topic;
+  public readonly rumAppMonitor: rum.CfnAppMonitor;
 
   constructor(scope: Construct, id: string, props: MonitoringStackProps) {
     super(scope, id);
@@ -39,6 +42,9 @@ export class MonitoringStack extends Construct {
       );
     }
 
+    // CloudWatch RUM App Monitor
+    this.rumAppMonitor = this.createRumAppMonitor(config);
+
     // CloudWatch Dashboard
     this.dashboard = new cloudwatch.Dashboard(this, 'Dashboard', {
       dashboardName: `CloudBPA-${config.environment}`,
@@ -53,6 +59,9 @@ export class MonitoringStack extends Construct {
 
     // Custom Application Metrics
     this.createApplicationMetrics(config);
+
+    // RUM Metrics
+    this.createRumMetrics(config);
 
     // Alarms
     if (appSyncApi) {
@@ -121,7 +130,10 @@ export class MonitoringStack extends Construct {
     );
   }
 
-  private createLambdaMetrics(functions: Record<string, lambda.Function>, config: EnvironmentConfig) {
+  private createLambdaMetrics(
+    functions: Record<string, lambda.Function>,
+    config: EnvironmentConfig
+  ) {
     const lambdaMetrics = Object.entries(functions).map(([name, func]) => {
       return {
         name,
@@ -133,15 +145,16 @@ export class MonitoringStack extends Construct {
     });
 
     // Group Lambda functions by type (query, mutation, etc.)
-    const queryFunctions = lambdaMetrics.filter(m => 
-      m.name.toLowerCase().includes('get') || m.name.toLowerCase().includes('list')
+    const queryFunctions = lambdaMetrics.filter(
+      (m) => m.name.toLowerCase().includes('get') || m.name.toLowerCase().includes('list')
     );
-    const mutationFunctions = lambdaMetrics.filter(m => 
-      m.name.toLowerCase().includes('create') || 
-      m.name.toLowerCase().includes('update') || 
-      m.name.toLowerCase().includes('delete') ||
-      m.name.toLowerCase().includes('start') ||
-      m.name.toLowerCase().includes('generate')
+    const mutationFunctions = lambdaMetrics.filter(
+      (m) =>
+        m.name.toLowerCase().includes('create') ||
+        m.name.toLowerCase().includes('update') ||
+        m.name.toLowerCase().includes('delete') ||
+        m.name.toLowerCase().includes('start') ||
+        m.name.toLowerCase().includes('generate')
     );
 
     // Query Lambda Metrics
@@ -149,12 +162,12 @@ export class MonitoringStack extends Construct {
       this.dashboard.addWidgets(
         new cloudwatch.GraphWidget({
           title: 'Query Lambda Duration',
-          left: queryFunctions.map(f => f.duration),
+          left: queryFunctions.map((f) => f.duration),
           width: 12,
         }),
         new cloudwatch.GraphWidget({
           title: 'Query Lambda Errors',
-          left: queryFunctions.map(f => f.errors),
+          left: queryFunctions.map((f) => f.errors),
           width: 12,
         })
       );
@@ -165,19 +178,19 @@ export class MonitoringStack extends Construct {
       this.dashboard.addWidgets(
         new cloudwatch.GraphWidget({
           title: 'Mutation Lambda Duration',
-          left: mutationFunctions.map(f => f.duration),
+          left: mutationFunctions.map((f) => f.duration),
           width: 12,
         }),
         new cloudwatch.GraphWidget({
           title: 'Mutation Lambda Errors',
-          left: mutationFunctions.map(f => f.errors),
+          left: mutationFunctions.map((f) => f.errors),
           width: 12,
         })
       );
     }
 
     // Lambda Throttles (all functions)
-    const allThrottles = lambdaMetrics.map(f => f.throttles);
+    const allThrottles = lambdaMetrics.map((f) => f.throttles);
     if (allThrottles.length > 0) {
       this.dashboard.addWidgets(
         new cloudwatch.GraphWidget({
@@ -293,9 +306,7 @@ export class MonitoringStack extends Construct {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
-    appSyncErrorAlarm.addAlarmAction(
-      new cloudwatchActions.SnsAction(this.alarmTopic)
-    );
+    appSyncErrorAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
 
     // Lambda Error Rate Alarms
     Object.entries(functions).forEach(([name, func]) => {
@@ -311,9 +322,7 @@ export class MonitoringStack extends Construct {
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
       });
 
-      errorAlarm.addAlarmAction(
-        new cloudwatchActions.SnsAction(this.alarmTopic)
-      );
+      errorAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
 
       // Duration Alarm for critical functions
       if (name.includes('Analysis') || name.includes('Report')) {
@@ -329,9 +338,7 @@ export class MonitoringStack extends Construct {
           treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
         });
 
-        durationAlarm.addAlarmAction(
-          new cloudwatchActions.SnsAction(this.alarmTopic)
-        );
+        durationAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
       }
     });
 
@@ -351,9 +358,7 @@ export class MonitoringStack extends Construct {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
-    quotaAlarm.addAlarmAction(
-      new cloudwatchActions.SnsAction(this.alarmTopic)
-    );
+    quotaAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
   }
 
   private setupLogRetention(functions: Record<string, lambda.Function>, config: EnvironmentConfig) {
@@ -362,9 +367,8 @@ export class MonitoringStack extends Construct {
       new logs.LogGroup(this, `${name}LogGroup`, {
         logGroupName: `/aws/lambda/${func.functionName}`,
         retention: this.getLogRetention(config.monitoringConfig.logRetentionDays),
-        removalPolicy: config.environment === 'prod' 
-          ? cdk.RemovalPolicy.RETAIN 
-          : cdk.RemovalPolicy.DESTROY,
+        removalPolicy:
+          config.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
       });
     });
   }
@@ -391,5 +395,185 @@ export class MonitoringStack extends Construct {
     };
 
     return retentionMap[days] || logs.RetentionDays.ONE_MONTH;
+  }
+
+  private createRumAppMonitor(config: EnvironmentConfig): rum.CfnAppMonitor {
+    // Create IAM role for RUM to write to CloudWatch
+    const rumRole = new iam.Role(this, 'RumRole', {
+      assumedBy: new iam.ServicePrincipal('rum.amazonaws.com'),
+      inlinePolicies: {
+        RumServicePolicy: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'logs:PutLogEvents',
+                'logs:CreateLogGroup',
+                'logs:CreateLogStream',
+                'xray:PutTraceSegments',
+                'xray:PutTelemetryRecords',
+                'cognito-identity:*',
+              ],
+              resources: ['*'],
+            }),
+          ],
+        }),
+      },
+    });
+
+    // Create RUM App Monitor
+    const rumMonitor = new rum.CfnAppMonitor(this, 'RumAppMonitor', {
+      name: `cloud-bpa-${config.environment}`,
+      domain: config.domainName || 'localhost',
+      cwLogEnabled: true,
+      sessionSampleRate: config.environment === 'prod' ? 0.1 : 1.0,
+      appMonitorConfiguration: {
+        allowCookies: true,
+        enableXRay: true,
+        sessionSampleRate: config.environment === 'prod' ? 0.1 : 1.0,
+        telemetries: ['errors', 'performance', 'http'],
+        guestRoleArn: rumRole.roleArn,
+      },
+      customEvents: {
+        status: 'ENABLED',
+      },
+      tags: [
+        { key: 'Environment', value: config.environment },
+        { key: 'Project', value: 'CloudBestPracticeAnalyzer' },
+        { key: 'Service', value: 'Frontend' },
+      ],
+    });
+
+    // Create CloudWatch Log Group for RUM
+    new logs.LogGroup(this, 'RumLogGroup', {
+      logGroupName: `/aws/rum/${config.environment}`,
+      retention: this.getLogRetention(config.monitoringConfig.logRetentionDays),
+      removalPolicy:
+        config.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+    });
+
+    return rumMonitor;
+  }
+
+  private createRumMetrics(config: EnvironmentConfig) {
+    // RUM Error Rate
+    const rumErrorRate = new cloudwatch.Metric({
+      namespace: 'AWS/RUM',
+      metricName: 'JsErrorCount',
+      dimensionsMap: {
+        application_name: `cloud-bpa-${config.environment}`,
+      },
+      statistic: 'Sum',
+      period: cdk.Duration.minutes(5),
+    });
+
+    // RUM Page Load Time
+    const rumPageLoadTime = new cloudwatch.Metric({
+      namespace: 'AWS/RUM',
+      metricName: 'PageLoadTime',
+      dimensionsMap: {
+        application_name: `cloud-bpa-${config.environment}`,
+      },
+      statistic: 'Average',
+      period: cdk.Duration.minutes(5),
+    });
+
+    // RUM Core Web Vitals - First Contentful Paint
+    const rumFcp = new cloudwatch.Metric({
+      namespace: 'AWS/RUM',
+      metricName: 'FirstContentfulPaint',
+      dimensionsMap: {
+        application_name: `cloud-bpa-${config.environment}`,
+      },
+      statistic: 'Average',
+      period: cdk.Duration.minutes(5),
+    });
+
+    // RUM Core Web Vitals - Largest Contentful Paint
+    const rumLcp = new cloudwatch.Metric({
+      namespace: 'AWS/RUM',
+      metricName: 'LargestContentfulPaint',
+      dimensionsMap: {
+        application_name: `cloud-bpa-${config.environment}`,
+      },
+      statistic: 'Average',
+      period: cdk.Duration.minutes(5),
+    });
+
+    // RUM Core Web Vitals - Cumulative Layout Shift
+    const rumCls = new cloudwatch.Metric({
+      namespace: 'AWS/RUM',
+      metricName: 'CumulativeLayoutShift',
+      dimensionsMap: {
+        application_name: `cloud-bpa-${config.environment}`,
+      },
+      statistic: 'Average',
+      period: cdk.Duration.minutes(5),
+    });
+
+    // RUM Session Count
+    const rumSessionCount = new cloudwatch.Metric({
+      namespace: 'AWS/RUM',
+      metricName: 'SessionCount',
+      dimensionsMap: {
+        application_name: `cloud-bpa-${config.environment}`,
+      },
+      statistic: 'Sum',
+      period: cdk.Duration.hours(1),
+    });
+
+    // Add RUM widgets to dashboard
+    this.dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'Frontend Error Rate',
+        left: [rumErrorRate],
+        width: 12,
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'Page Load Performance',
+        left: [rumPageLoadTime],
+        width: 12,
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'Core Web Vitals',
+        left: [rumFcp, rumLcp],
+        right: [rumCls],
+        width: 24,
+      }),
+      new cloudwatch.SingleValueWidget({
+        title: 'Active Sessions',
+        metrics: [rumSessionCount],
+        width: 6,
+      })
+    );
+
+    // RUM-specific alarms
+    if (config.environment === 'prod') {
+      // High error rate alarm
+      const rumErrorAlarm = new cloudwatch.Alarm(this, 'RumErrorAlarm', {
+        alarmName: `CloudBPA-RUM-ErrorRate-${config.environment}`,
+        alarmDescription: 'Frontend error rate is too high',
+        metric: rumErrorRate,
+        threshold: 50,
+        evaluationPeriods: 2,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
+
+      rumErrorAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
+
+      // Poor page load performance alarm
+      const rumPerformanceAlarm = new cloudwatch.Alarm(this, 'RumPerformanceAlarm', {
+        alarmName: `CloudBPA-RUM-Performance-${config.environment}`,
+        alarmDescription: 'Page load time is too slow',
+        metric: rumPageLoadTime,
+        threshold: 3000, // 3 seconds
+        evaluationPeriods: 3,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
+
+      rumPerformanceAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
+    }
   }
 }

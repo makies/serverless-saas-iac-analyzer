@@ -26,7 +26,9 @@ interface GetFrameworkArgs {
   frameworkId: string;
 }
 
-const getFramework: AppSyncResolverHandler<GetFrameworkArgs, FrameworkRegistryItem | null> = async (event) => {
+const getFramework: AppSyncResolverHandler<GetFrameworkArgs, FrameworkRegistryItem | null> = async (
+  event
+) => {
   const { arguments: args, identity } = event;
   const { frameworkType, frameworkId } = args;
 
@@ -61,7 +63,6 @@ const getFramework: AppSyncResolverHandler<GetFrameworkArgs, FrameworkRegistryIt
     });
 
     return framework;
-
   } catch (error) {
     logger.error('Error getting framework', { error, frameworkType, frameworkId });
     throw new Error('Failed to get framework');

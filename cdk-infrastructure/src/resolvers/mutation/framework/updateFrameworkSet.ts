@@ -40,7 +40,10 @@ interface UpdateFrameworkSetArgs {
   isDefault?: boolean;
 }
 
-const updateFrameworkSet: AppSyncResolverHandler<UpdateFrameworkSetArgs, TenantFrameworkConfigItem> = async (event) => {
+const updateFrameworkSet: AppSyncResolverHandler<
+  UpdateFrameworkSetArgs,
+  TenantFrameworkConfigItem
+> = async (event) => {
   const { arguments: args, identity } = event;
   const { tenantId, setName, description, frameworks, isDefault } = args;
 
@@ -109,7 +112,9 @@ const updateFrameworkSet: AppSyncResolverHandler<UpdateFrameworkSetArgs, TenantF
       updateExpressions.push('#GSI1PK = :gsi1pk', '#GSI1SK = :gsi1sk');
       expressionAttributeNames['#GSI1PK'] = 'GSI1PK';
       expressionAttributeNames['#GSI1SK'] = 'GSI1SK';
-      expressionAttributeValues[':gsi1pk'] = isDefault ? `TENANT#${tenantId}#DEFAULT` : `TENANT#${tenantId}#CUSTOM`;
+      expressionAttributeValues[':gsi1pk'] = isDefault
+        ? `TENANT#${tenantId}#DEFAULT`
+        : `TENANT#${tenantId}#CUSTOM`;
       expressionAttributeValues[':gsi1sk'] = `#${isDefault ? 'true' : 'false'}`;
     }
 
@@ -136,17 +141,16 @@ const updateFrameworkSet: AppSyncResolverHandler<UpdateFrameworkSetArgs, TenantF
     });
 
     return updatedItem;
-
   } catch (error: any) {
     if (error.name === 'ConditionalCheckFailedException') {
       logger.error('Framework set not found', { tenantId, setName });
       throw new Error(`Framework set '${setName}' not found`);
     }
 
-    logger.error('Error updating framework set', { 
-      error: error instanceof Error ? error.message : String(error), 
-      tenantId, 
-      setName 
+    logger.error('Error updating framework set', {
+      error: error instanceof Error ? error.message : String(error),
+      tenantId,
+      setName,
     });
     throw new Error('Failed to update framework set');
   }

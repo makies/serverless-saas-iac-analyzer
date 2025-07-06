@@ -31,7 +31,10 @@ interface GetTenantFrameworkConfigResult {
   defaultSet?: TenantFrameworkConfigItem;
 }
 
-const getTenantFrameworkConfig: AppSyncResolverHandler<GetTenantFrameworkConfigArgs, GetTenantFrameworkConfigResult> = async (event) => {
+const getTenantFrameworkConfig: AppSyncResolverHandler<
+  GetTenantFrameworkConfigArgs,
+  GetTenantFrameworkConfigResult
+> = async (event) => {
   const { arguments: args, identity } = event;
   const { tenantId, setName } = args;
 
@@ -67,7 +70,6 @@ const getTenantFrameworkConfig: AppSyncResolverHandler<GetTenantFrameworkConfigA
       }
 
       return { items: [item] };
-
     } else {
       // Get all framework sets for tenant
       const queryCommand = new QueryCommand({
@@ -83,7 +85,7 @@ const getTenantFrameworkConfig: AppSyncResolverHandler<GetTenantFrameworkConfigA
       const items = (result.Items || []) as TenantFrameworkConfigItem[];
 
       // Find default set
-      const defaultSet = items.find(item => item.isDefault);
+      const defaultSet = items.find((item) => item.isDefault);
 
       logger.info('GetTenantFrameworkConfig query completed', {
         tenantId,
@@ -96,12 +98,11 @@ const getTenantFrameworkConfig: AppSyncResolverHandler<GetTenantFrameworkConfigA
         defaultSet,
       };
     }
-
   } catch (error) {
-    logger.error('Error getting tenant framework config', { 
-      error: error instanceof Error ? error.message : String(error), 
-      tenantId, 
-      setName 
+    logger.error('Error getting tenant framework config', {
+      error: error instanceof Error ? error.message : String(error),
+      tenantId,
+      setName,
     });
     throw new Error('Failed to get tenant framework configuration');
   }

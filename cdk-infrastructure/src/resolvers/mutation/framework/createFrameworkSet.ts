@@ -5,7 +5,12 @@
 
 import { AppSyncResolverHandler } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, UpdateCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  UpdateCommand,
+  TransactWriteCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
@@ -41,7 +46,10 @@ interface CreateFrameworkSetArgs {
   isDefault?: boolean;
 }
 
-const createFrameworkSet: AppSyncResolverHandler<CreateFrameworkSetArgs, TenantFrameworkConfigItem> = async (event) => {
+const createFrameworkSet: AppSyncResolverHandler<
+  CreateFrameworkSetArgs,
+  TenantFrameworkConfigItem
+> = async (event) => {
   const { arguments: args, identity } = event;
   const { tenantId, setName, description, frameworks, isDefault = false } = args;
 
@@ -111,17 +119,16 @@ const createFrameworkSet: AppSyncResolverHandler<CreateFrameworkSetArgs, TenantF
     });
 
     return frameworkSetItem;
-
   } catch (error: any) {
     if (error.name === 'ConditionalCheckFailedException') {
       logger.error('Framework set already exists', { tenantId, setName });
       throw new Error(`Framework set '${setName}' already exists for this tenant`);
     }
 
-    logger.error('Error creating framework set', { 
-      error: error instanceof Error ? error.message : String(error), 
-      tenantId, 
-      setName 
+    logger.error('Error creating framework set', {
+      error: error instanceof Error ? error.message : String(error),
+      tenantId,
+      setName,
     });
     throw new Error('Failed to create framework set');
   }

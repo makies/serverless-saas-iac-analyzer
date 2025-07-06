@@ -9,6 +9,9 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import { EnvironmentConfig } from './config/environments';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface SBTAmplifyIntegrationStackProps extends cdk.StackProps {
   config: EnvironmentConfig;
@@ -42,9 +45,8 @@ export class SBTAmplifyIntegrationStack extends cdk.Stack {
       pointInTimeRecovery: true,
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
       stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
-      removalPolicy: config.environment === 'prod' 
-        ? cdk.RemovalPolicy.RETAIN 
-        : cdk.RemovalPolicy.DESTROY,
+      removalPolicy:
+        config.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
     });
 
     // Global Secondary Index for tenant status queries
@@ -82,17 +84,12 @@ export class SBTAmplifyIntegrationStack extends cdk.Stack {
                 'dynamodb:Query',
                 'dynamodb:Scan',
               ],
-              resources: [
-                sbtTenantsTable.tableArn,
-                `${sbtTenantsTable.tableArn}/index/*`,
-              ],
+              resources: [sbtTenantsTable.tableArn, `${sbtTenantsTable.tableArn}/index/*`],
             }),
             // EventBridge access
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
-              actions: [
-                'events:PutEvents',
-              ],
+              actions: ['events:PutEvents'],
               resources: [
                 this.sbtEventBridge.eventBusArn,
                 `arn:aws:events:${this.region}:${this.account}:event-bus/default`,
@@ -122,18 +119,12 @@ export class SBTAmplifyIntegrationStack extends cdk.Stack {
                 'cognito-idp:ListUsers',
                 'cognito-idp:ListUsersInGroup',
               ],
-              resources: [
-                `arn:aws:cognito-idp:${this.region}:${this.account}:userpool/*`,
-              ],
+              resources: [`arn:aws:cognito-idp:${this.region}:${this.account}:userpool/*`],
             }),
             // SSM Parameter access
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
-              actions: [
-                'ssm:GetParameter',
-                'ssm:GetParameters',
-                'ssm:PutParameter',
-              ],
+              actions: ['ssm:GetParameter', 'ssm:GetParameters', 'ssm:PutParameter'],
               resources: [
                 `arn:aws:ssm:${this.region}:${this.account}:parameter/cloudbpa/${config.environment}/*`,
               ],
@@ -145,7 +136,7 @@ export class SBTAmplifyIntegrationStack extends cdk.Stack {
 
     // Lambda function for tenant management (SBT Control Plane)
     this.tenantManagementFunction = new nodejs.NodejsFunction(this, 'TenantManagementFunction', {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'handler',
       entry: path.join(__dirname, '../src/functions/tenant-management.ts'),
       timeout: cdk.Duration.seconds(30),
@@ -167,7 +158,7 @@ export class SBTAmplifyIntegrationStack extends cdk.Stack {
 
     // Lambda function for SBT <-> Amplify data synchronization
     const dataSyncFunction = new nodejs.NodejsFunction(this, 'DataSyncFunction', {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'handler',
       entry: path.join(__dirname, '../src/functions/data-sync.ts'),
       timeout: cdk.Duration.seconds(60),

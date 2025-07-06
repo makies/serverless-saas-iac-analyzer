@@ -48,12 +48,21 @@ interface DashboardMetrics {
   }[];
   trends: {
     analysesOverTime: { date: string; count: number }[];
-    findingsOverTime: { date: string; critical: number; high: number; medium: number; low: number }[];
+    findingsOverTime: {
+      date: string;
+      critical: number;
+      high: number;
+      medium: number;
+      low: number;
+    }[];
   };
   generatedAt: string;
 }
 
-const getDashboardMetrics: AppSyncResolverHandler<GetDashboardMetricsArgs, DashboardMetrics> = async (event) => {
+const getDashboardMetrics: AppSyncResolverHandler<
+  GetDashboardMetricsArgs,
+  DashboardMetrics
+> = async (event) => {
   const { arguments: args, identity } = event;
   const { tenantId, timeRange = '30d' } = args;
 
@@ -80,7 +89,7 @@ const getDashboardMetrics: AppSyncResolverHandler<GetDashboardMetricsArgs, Dashb
     // Calculate date range
     const now = new Date();
     const daysBack = timeRange === '7d' ? 7 : timeRange === '90d' ? 90 : 30;
-    const startDate = new Date(now.getTime() - (daysBack * 24 * 60 * 60 * 1000));
+    const startDate = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
 
     // Get projects count
     const projectsCommand = new QueryCommand({
@@ -112,8 +121,10 @@ const getDashboardMetrics: AppSyncResolverHandler<GetDashboardMetricsArgs, Dashb
     const analyses = analysesResult.Items || [];
 
     const totalAnalyses = analyses.length;
-    const completedAnalyses = analyses.filter(a => a.status === 'COMPLETED').length;
-    const pendingAnalyses = analyses.filter(a => ['PENDING', 'RUNNING'].includes(a.status)).length;
+    const completedAnalyses = analyses.filter((a) => a.status === 'COMPLETED').length;
+    const pendingAnalyses = analyses.filter((a) =>
+      ['PENDING', 'RUNNING'].includes(a.status)
+    ).length;
 
     // Get findings summary (simplified for now)
     const findingsCommand = new QueryCommand({
@@ -130,10 +141,10 @@ const getDashboardMetrics: AppSyncResolverHandler<GetDashboardMetricsArgs, Dashb
     const findingsResult = await ddbDocClient.send(findingsCommand);
     const findings = findingsResult.Items || [];
 
-    const criticalFindings = findings.filter(f => f.severity === 'CRITICAL').length;
-    const highFindings = findings.filter(f => f.severity === 'HIGH').length;
-    const mediumFindings = findings.filter(f => f.severity === 'MEDIUM').length;
-    const lowFindings = findings.filter(f => f.severity === 'LOW').length;
+    const criticalFindings = findings.filter((f) => f.severity === 'CRITICAL').length;
+    const highFindings = findings.filter((f) => f.severity === 'HIGH').length;
+    const mediumFindings = findings.filter((f) => f.severity === 'MEDIUM').length;
+    const lowFindings = findings.filter((f) => f.severity === 'LOW').length;
 
     // Build metrics response
     const metrics: DashboardMetrics = {
@@ -153,13 +164,27 @@ const getDashboardMetrics: AppSyncResolverHandler<GetDashboardMetricsArgs, Dashb
         recentAnalyses: analyses.slice(0, 10),
       },
       frameworkUsage: [
-        { frameworkId: 'wa-framework', name: 'Well-Architected Framework', usageCount: Math.floor(totalAnalyses * 0.8) },
-        { frameworkId: 'wa-serverless', name: 'Serverless Lens', usageCount: Math.floor(totalAnalyses * 0.3) },
+        {
+          frameworkId: 'wa-framework',
+          name: 'Well-Architected Framework',
+          usageCount: Math.floor(totalAnalyses * 0.8),
+        },
+        {
+          frameworkId: 'wa-serverless',
+          name: 'Serverless Lens',
+          usageCount: Math.floor(totalAnalyses * 0.3),
+        },
         { frameworkId: 'wa-saas', name: 'SaaS Lens', usageCount: Math.floor(totalAnalyses * 0.2) },
       ],
       trends: {
         analysesOverTime: generateTrendData(daysBack, totalAnalyses),
-        findingsOverTime: generateFindingsTrendData(daysBack, criticalFindings, highFindings, mediumFindings, lowFindings),
+        findingsOverTime: generateFindingsTrendData(
+          daysBack,
+          criticalFindings,
+          highFindings,
+          mediumFindings,
+          lowFindings
+        ),
       },
       generatedAt: new Date().toISOString(),
     };
@@ -172,9 +197,8 @@ const getDashboardMetrics: AppSyncResolverHandler<GetDashboardMetricsArgs, Dashb
     });
 
     return metrics;
-
   } catch (error: any) {
-    logger.error('Error getting dashboard metrics', { 
+    logger.error('Error getting dashboard metrics', {
       error: error instanceof Error ? error.message : String(error),
       targetTenantId,
       timeRange,
@@ -187,26 +211,31 @@ const getDashboardMetrics: AppSyncResolverHandler<GetDashboardMetricsArgs, Dashb
 function generateTrendData(days: number, total: number): { date: string; count: number }[] {
   const data = [];
   const now = new Date();
-  
+
   for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
+    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
     data.push({
       date: date.toISOString().split('T')[0],
       count: Math.floor(Math.random() * (total / days + 1)),
     });
   }
-  
+
   return data;
 }
 
 // Helper function to generate findings trend data
-function generateFindingsTrendData(days: number, critical: number, high: number, medium: number, low: number): 
-  { date: string; critical: number; high: number; medium: number; low: number }[] {
+function generateFindingsTrendData(
+  days: number,
+  critical: number,
+  high: number,
+  medium: number,
+  low: number
+): { date: string; critical: number; high: number; medium: number; low: number }[] {
   const data = [];
   const now = new Date();
-  
+
   for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
+    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
     data.push({
       date: date.toISOString().split('T')[0],
       critical: Math.floor(Math.random() * (critical / days + 1)),
@@ -215,7 +244,7 @@ function generateFindingsTrendData(days: number, critical: number, high: number,
       low: Math.floor(Math.random() * (low / days + 1)),
     });
   }
-  
+
   return data;
 }
 

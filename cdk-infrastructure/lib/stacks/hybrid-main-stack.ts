@@ -7,13 +7,13 @@ import { MonitoringStack } from './monitoring-stack';
 
 /**
  * Hybrid Main Stack for Amplify + CDK architecture
- * 
+ *
  * This stack is responsible for:
  * - SBT integration (Control Plane)
  * - Advanced monitoring and alerting
  * - Cross-service integration (EventBridge)
  * - Security policies and IAM
- * 
+ *
  * Amplify manages:
  * - GraphQL API (AppSync)
  * - Authentication (Cognito)
@@ -128,14 +128,8 @@ export class HybridMainStack extends cdk.Stack {
           sid: 'EnforceTenantBoundaryAccess',
           effect: cdk.aws_iam.Effect.DENY,
           principals: [new cdk.aws_iam.AnyPrincipal()],
-          actions: [
-            's3:GetObject',
-            's3:PutObject',
-            's3:DeleteObject',
-          ],
-          resources: [
-            `arn:aws:s3:::cloudbpa-storage-${config.environment}/*`,
-          ],
+          actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+          resources: [`arn:aws:s3:::cloudbpa-storage-${config.environment}/*`],
           conditions: {
             StringNotLike: {
               's3:prefix': '${cognito-identity.amazonaws.com:sub}/*',
@@ -147,9 +141,7 @@ export class HybridMainStack extends cdk.Stack {
           effect: cdk.aws_iam.Effect.DENY,
           principals: [new cdk.aws_iam.AnyPrincipal()],
           actions: ['s3:PutObject'],
-          resources: [
-            `arn:aws:s3:::cloudbpa-storage-${config.environment}/uploads/*`,
-          ],
+          resources: [`arn:aws:s3:::cloudbpa-storage-${config.environment}/uploads/*`],
           conditions: {
             NumericGreaterThan: {
               's3:content-length': 10485760, // 10MB limit for SBT Basic
@@ -179,9 +171,7 @@ export class HybridMainStack extends cdk.Stack {
             'dynamodb:DeleteItem',
             'dynamodb:Query',
           ],
-          resources: [
-            `arn:aws:dynamodb:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:table/*`,
-          ],
+          resources: [`arn:aws:dynamodb:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:table/*`],
           conditions: {
             'ForAllValues:StringLike': {
               'dynamodb:LeadingKeys': ['${cognito-identity.amazonaws.com:sub}'],

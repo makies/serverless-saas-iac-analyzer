@@ -30,7 +30,10 @@ interface DeleteFrameworkSetResult {
   message: string;
 }
 
-const deleteFrameworkSet: AppSyncResolverHandler<DeleteFrameworkSetArgs, DeleteFrameworkSetResult> = async (event) => {
+const deleteFrameworkSet: AppSyncResolverHandler<
+  DeleteFrameworkSetArgs,
+  DeleteFrameworkSetResult
+> = async (event) => {
   const { arguments: args, identity } = event;
   const { tenantId, setName } = args;
 
@@ -66,7 +69,9 @@ const deleteFrameworkSet: AppSyncResolverHandler<DeleteFrameworkSetArgs, DeleteF
     // Prevent deletion of default framework set without replacement
     if (existingItem.isDefault) {
       logger.warn('Attempt to delete default framework set', { tenantId, setName });
-      throw new Error('Cannot delete the default framework set. Please set another framework set as default first.');
+      throw new Error(
+        'Cannot delete the default framework set. Please set another framework set as default first.'
+      );
     }
 
     // Delete the framework set
@@ -90,24 +95,26 @@ const deleteFrameworkSet: AppSyncResolverHandler<DeleteFrameworkSetArgs, DeleteF
       success: true,
       message: `Framework set '${setName}' has been deleted successfully`,
     };
-
   } catch (error: any) {
     if (error.name === 'ConditionalCheckFailedException') {
       logger.error('Framework set not found for deletion', { tenantId, setName });
       throw new Error(`Framework set '${setName}' not found`);
     }
 
-    logger.error('Error deleting framework set', { 
-      error: error instanceof Error ? error.message : String(error), 
-      tenantId, 
-      setName 
+    logger.error('Error deleting framework set', {
+      error: error instanceof Error ? error.message : String(error),
+      tenantId,
+      setName,
     });
-    
+
     // Re-throw custom errors
-    if (error instanceof Error && error.message.includes('Cannot delete the default framework set')) {
+    if (
+      error instanceof Error &&
+      error.message.includes('Cannot delete the default framework set')
+    ) {
       throw error;
     }
-    
+
     throw new Error('Failed to delete framework set');
   }
 };

@@ -14,14 +14,14 @@ export const logger = new Logger({
   logLevel: LOG_LEVEL as 'DEBUG' | 'INFO' | 'WARN' | 'ERROR',
   persistentLogAttributes: {
     environment: ENVIRONMENT,
-    version: process.env.VERSION || '1.0.0'
-  }
+    version: process.env.VERSION || '1.0.0',
+  },
 });
 
 // Tracer インスタンス
 export const tracer = new Tracer({
   serviceName: SERVICE_NAME,
-  captureHTTPsRequests: true
+  captureHTTPsRequests: true,
 });
 
 // Metrics インスタンス
@@ -30,15 +30,18 @@ export const metrics = new Metrics({
   namespace: 'CloudBestPracticeAnalyzer',
   defaultDimensions: {
     Environment: ENVIRONMENT,
-    Service: SERVICE_NAME
-  }
+    Service: SERVICE_NAME,
+  },
 });
 
 // パラメータ取得ヘルパー
 export const getSecureParameter = async (name: string): Promise<string> => {
-  return await getParameter(name, { decrypt: true }) as string;
+  return (await getParameter(name, { decrypt: true })) as string;
 };
 
-export const getParameterWithCache = async (name: string, maxAge: number = 300): Promise<string> => {
-  return await getParameter(name, { maxAge }) as string;
+export const getParameterWithCache = async (
+  name: string,
+  maxAge: number = 300
+): Promise<string> => {
+  return (await getParameter(name, { maxAge })) as string;
 };

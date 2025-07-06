@@ -54,7 +54,7 @@ const getTenant: AppSyncResolverHandler<GetTenantArgs, Tenant | null> = async (e
   // Authorization check - users can only access their own tenant data
   const userTenantId = (identity as any)?.claims?.['custom:tenantId'];
   const userRole = (identity as any)?.claims?.['custom:role'];
-  
+
   // SystemAdmin can access any tenant, others can only access their own
   if (userRole !== 'SystemAdmin' && userTenantId !== tenantId) {
     throw new Error('Access denied: Cannot access other tenant data');
@@ -91,11 +91,10 @@ const getTenant: AppSyncResolverHandler<GetTenantArgs, Tenant | null> = async (e
     });
 
     return tenant;
-
   } catch (error: any) {
-    logger.error('Error getting tenant', { 
-      error: error instanceof Error ? error.message : String(error), 
-      tenantId 
+    logger.error('Error getting tenant', {
+      error: error instanceof Error ? error.message : String(error),
+      tenantId,
     });
     throw new Error('Failed to get tenant');
   }

@@ -12,6 +12,9 @@ import { Construct } from 'constructs';
 import { EnvironmentConfig } from '../config/environments';
 import { LAMBDA_FUNCTION_NAMES } from '../config/constants';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface AppSyncStackProps {
   config: EnvironmentConfig;
@@ -39,9 +42,7 @@ export class AppSyncStack extends Construct {
     // GraphQL API
     this.api = new appsync.GraphqlApi(this, 'GraphQLAPI', {
       name: `${config.appSyncConfig.name}-${config.environment}`,
-      definition: appsync.Definition.fromFile(
-        path.join(__dirname, '../../schema/schema.graphql')
-      ),
+      definition: appsync.Definition.fromFile(path.join(__dirname, '../../schema/schema.graphql')),
       authorizationConfig: {
         defaultAuthorization: {
           authorizationType: appsync.AuthorizationType.USER_POOL,
@@ -85,7 +86,7 @@ export class AppSyncStack extends Construct {
                 'dynamodb:BatchGetItem',
                 'dynamodb:BatchWriteItem',
               ],
-              resources: Object.values(tables).flatMap(table => [
+              resources: Object.values(tables).flatMap((table) => [
                 table.tableArn,
                 `${table.tableArn}/index/*`,
               ]),
@@ -96,13 +97,8 @@ export class AppSyncStack extends Construct {
           statements: [
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
-              actions: [
-                's3:GetObject',
-                's3:PutObject',
-                's3:DeleteObject',
-                's3:ListBucket',
-              ],
-              resources: Object.values(buckets).flatMap(bucket => [
+              actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject', 's3:ListBucket'],
+              resources: Object.values(buckets).flatMap((bucket) => [
                 bucket.bucketArn,
                 `${bucket.bucketArn}/*`,
               ]),
@@ -113,10 +109,7 @@ export class AppSyncStack extends Construct {
           statements: [
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
-              actions: [
-                'bedrock:InvokeModel',
-                'bedrock:InvokeModelWithResponseStream',
-              ],
+              actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
               resources: [
                 `arn:aws:bedrock:${config.bedrockConfig.region}::foundation-model/${config.bedrockConfig.modelId}`,
               ],
@@ -127,11 +120,7 @@ export class AppSyncStack extends Construct {
           statements: [
             new iam.PolicyStatement({
               effect: iam.Effect.ALLOW,
-              actions: [
-                'ssm:GetParameter',
-                'ssm:GetParameters',
-                'ssm:GetParametersByPath',
-              ],
+              actions: ['ssm:GetParameter', 'ssm:GetParameters', 'ssm:GetParametersByPath'],
               resources: [
                 `arn:aws:ssm:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:parameter/cloud-bpa/${config.environment}/*`,
               ],
@@ -153,7 +142,7 @@ export class AppSyncStack extends Construct {
 
     // Common Lambda configuration
     const commonLambdaProps = {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_22_X,
       timeout: cdk.Duration.seconds(config.lambdaConfig.timeout),
       memorySize: config.lambdaConfig.memorySize,
       role: lambdaExecutionRole,
@@ -208,7 +197,7 @@ export class AppSyncStack extends Construct {
     cdk.Tags.of(this.api).add('Service', 'GraphQL');
   }
 
-  private createQueryResolvers(commonProps: any) {
+  private createQueryResolvers(commonProps: nodejs.NodejsFunctionProps) {
     // Tenant queries
     this.resolverFunctions[LAMBDA_FUNCTION_NAMES.GET_TENANT] = new nodejs.NodejsFunction(
       this,
@@ -244,16 +233,13 @@ export class AppSyncStack extends Construct {
       }
     );
 
-    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.LIST_PROJECTS_BY_TENANT] = new nodejs.NodejsFunction(
-      this,
-      'ListProjectsByTenantFunction',
-      {
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.LIST_PROJECTS_BY_TENANT] =
+      new nodejs.NodejsFunction(this, 'ListProjectsByTenantFunction', {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/listProjectsByTenant.ts'),
         handler: 'handler',
         functionName: `${commonProps.environment.SERVICE_NAME}-listProjectsByTenant-${commonProps.environment.ENVIRONMENT}`,
-      }
-    );
+      });
 
     // Analysis queries
     this.resolverFunctions[LAMBDA_FUNCTION_NAMES.GET_ANALYSIS] = new nodejs.NodejsFunction(
@@ -267,16 +253,13 @@ export class AppSyncStack extends Construct {
       }
     );
 
-    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.LIST_ANALYSES_BY_PROJECT] = new nodejs.NodejsFunction(
-      this,
-      'ListAnalysesByProjectFunction',
-      {
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.LIST_ANALYSES_BY_PROJECT] =
+      new nodejs.NodejsFunction(this, 'ListAnalysesByProjectFunction', {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/listAnalysesByProject.ts'),
         handler: 'handler',
         functionName: `${commonProps.environment.SERVICE_NAME}-listAnalysesByProject-${commonProps.environment.ENVIRONMENT}`,
-      }
-    );
+      });
 
     // Dashboard queries
     this.resolverFunctions[LAMBDA_FUNCTION_NAMES.GET_DASHBOARD_METRICS] = new nodejs.NodejsFunction(
@@ -324,19 +307,19 @@ export class AppSyncStack extends Construct {
       }
     );
 
-    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.GET_TENANT_FRAMEWORK_CONFIG] = new nodejs.NodejsFunction(
-      this,
-      'GetTenantFrameworkConfigFunction',
-      {
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.GET_TENANT_FRAMEWORK_CONFIG] =
+      new nodejs.NodejsFunction(this, 'GetTenantFrameworkConfigFunction', {
         ...commonProps,
-        entry: path.join(__dirname, '../../src/resolvers/query/framework/getTenantFrameworkConfig.ts'),
+        entry: path.join(
+          __dirname,
+          '../../src/resolvers/query/framework/getTenantFrameworkConfig.ts'
+        ),
         handler: 'handler',
         functionName: `${commonProps.environment.SERVICE_NAME}-getTenantFrameworkConfig-${commonProps.environment.ENVIRONMENT}`,
-      }
-    );
+      });
   }
 
-  private createMutationResolvers(commonProps: any) {
+  private createMutationResolvers(commonProps: nodejs.NodejsFunctionProps) {
     // Project mutations
     this.resolverFunctions[LAMBDA_FUNCTION_NAMES.CREATE_PROJECT] = new nodejs.NodejsFunction(
       this,
@@ -430,7 +413,7 @@ export class AppSyncStack extends Construct {
     );
   }
 
-  private createSubscriptionResolvers(commonProps: any) {
+  private createSubscriptionResolvers(_commonProps: nodejs.NodejsFunctionProps) {
     // Subscription resolvers are handled by AppSync's built-in subscription mechanism
     // No separate Lambda functions needed for basic subscriptions
   }
@@ -511,7 +494,8 @@ export class AppSyncStack extends Construct {
     this.api.createResolver('GetTenantFrameworkConfigResolver', {
       typeName: 'Query',
       fieldName: 'getTenantFrameworkConfig',
-      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.GET_TENANT_FRAMEWORK_CONFIG}DataSource`],
+      dataSource:
+        this.dataSources[`${LAMBDA_FUNCTION_NAMES.GET_TENANT_FRAMEWORK_CONFIG}DataSource`],
     });
 
     // Mutation resolvers

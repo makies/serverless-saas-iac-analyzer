@@ -140,14 +140,13 @@ const createAnalysis: AppSyncResolverHandler<CreateAnalysisArgs, Analysis> = asy
     });
 
     return analysis;
-
   } catch (error: any) {
     if (error.name === 'ConditionalCheckFailedException') {
       logger.error('Analysis already exists', { analysisId, projectId });
       throw new Error('Analysis already exists');
     }
 
-    logger.error('Error creating analysis', { 
+    logger.error('Error creating analysis', {
       error: error instanceof Error ? error.message : String(error),
       projectId,
       analysisName: name,

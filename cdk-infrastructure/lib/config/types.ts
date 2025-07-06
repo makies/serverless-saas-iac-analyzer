@@ -138,7 +138,13 @@ export interface UserRecord {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'SYSTEM_ADMIN' | 'CLIENT_ADMIN' | 'PROJECT_MANAGER' | 'ANALYST' | 'VIEWER' | 'CLIENT_ENGINEER';
+  role:
+    | 'SYSTEM_ADMIN'
+    | 'CLIENT_ADMIN'
+    | 'PROJECT_MANAGER'
+    | 'ANALYST'
+    | 'VIEWER'
+    | 'CLIENT_ENGINEER';
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING_INVITATION';
   projectIds: string[];
   preferences?: {

@@ -66,7 +66,14 @@ export interface RuleImplementation {
 export interface RuleCheck {
   property?: string;
   attribute?: string;
-  condition: 'EXISTS' | 'NOT_EXISTS' | 'EQUALS' | 'NOT_EQUALS' | 'CONTAINS' | 'NOT_CONTAINS' | 'REGEX';
+  condition:
+    | 'EXISTS'
+    | 'NOT_EXISTS'
+    | 'EQUALS'
+    | 'NOT_EQUALS'
+    | 'CONTAINS'
+    | 'NOT_CONTAINS'
+    | 'REGEX';
   value?: any;
   message: string;
 }
