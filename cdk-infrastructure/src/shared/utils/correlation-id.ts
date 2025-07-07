@@ -76,7 +76,6 @@ export function setCorrelationContext(
     correlationId: correlationContext.correlationId,
     traceId: correlationContext.traceId,
     requestId: correlationContext.requestId,
-    timestamp: correlationContext.timestamp,
     sourceService: correlationContext.sourceService,
   });
 

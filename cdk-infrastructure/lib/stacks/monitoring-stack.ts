@@ -426,7 +426,6 @@ export class MonitoringStack extends Construct {
       name: `cloud-bpa-${config.environment}`,
       domain: config.domainName || 'localhost',
       cwLogEnabled: true,
-      sessionSampleRate: config.environment === 'prod' ? 0.1 : 1.0,
       appMonitorConfiguration: {
         allowCookies: true,
         enableXRay: true,

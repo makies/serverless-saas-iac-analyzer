@@ -92,7 +92,7 @@ const createProject: AppSyncResolverHandler<CreateProjectArgs, Project> = async 
 
     return project;
   } catch (error: unknown) {
-    if (error.name === 'ConditionalCheckFailedException') {
+    if ((error as any)?.name === 'ConditionalCheckFailedException') {
       logger.error('Project already exists', { projectId, tenantId });
       throw new Error('Project already exists');
     }

@@ -118,7 +118,7 @@ export class FrameworkExecutionEngine {
         duration: new Date().getTime() - new Date(startTime).getTime(),
         frameworks: [],
         aggregatedSummary: this.createEmptyAggregatedSummary(),
-        metadata: { error: error.message },
+        metadata: { error: error instanceof Error ? error.message : String(error) },
       };
     }
   }
@@ -198,7 +198,7 @@ export class FrameworkExecutionEngine {
     } catch (error) {
       this.logger.error('Framework execution failed', { frameworkId, error });
       
-      return this.createFailedFrameworkResult(frameworkId, error.message);
+      return this.createFailedFrameworkResult(frameworkId, error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -311,7 +311,7 @@ export class FrameworkExecutionEngine {
     } catch (error) {
       this.logger.error('Rule execution error', { 
         ruleId: context.rule.ruleId, 
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error)
       });
 
       return {
@@ -319,7 +319,7 @@ export class FrameworkExecutionEngine {
         status: 'ERROR',
         findings: [],
         executionTime: Date.now() - startTime,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         metadata: {},
       };
     }

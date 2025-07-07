@@ -8,7 +8,7 @@ import { FrameworkRegistry, RuleTemplates } from '../../shared/framework-engine'
 
 const logger = new Logger({
   serviceName: 'framework-initialization',
-  logLevel: process.env.LOG_LEVEL || 'INFO',
+  logLevel: (process.env.LOG_LEVEL as 'DEBUG' | 'INFO' | 'WARN' | 'ERROR') || 'INFO',
 });
 
 interface InitializationEvent {
@@ -71,9 +71,9 @@ export const handler = async (event: InitializationEvent): Promise<Initializatio
     
     return {
       success: false,
-      message: `Framework initialization failed: ${error.message}`,
+      message: `Framework initialization failed: ${error instanceof Error ? error.message : String(error)}`,
       initializedFrameworks: [],
-      errors: [error.message],
+      errors: [error instanceof Error ? error.message : String(error)],
     };
   }
 };
@@ -97,7 +97,7 @@ async function initializeFrameworks(
     });
   } catch (error) {
     logger.error('Failed to initialize frameworks', { error });
-    errors.push(`Framework initialization failed: ${error.message}`);
+    errors.push(`Framework initialization failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -127,7 +127,7 @@ async function updateFrameworks(
       initializedFrameworks.push(frameworkId);
     } catch (error) {
       logger.error('Failed to update framework', { frameworkId, error });
-      errors.push(`Failed to update framework ${frameworkId}: ${error.message}`);
+      errors.push(`Failed to update framework ${frameworkId}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }
@@ -153,7 +153,7 @@ async function resetFrameworks(
     logger.info('Framework reset completed');
   } catch (error) {
     logger.error('Failed to reset frameworks', { error });
-    errors.push(`Framework reset failed: ${error.message}`);
+    errors.push(`Framework reset failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

@@ -39,9 +39,9 @@ export class AppSyncStack extends Construct {
     this.dataSources = {};
 
     // GraphQL API
-    this.api = new appsync.GraphqlApi(this, 'GraphQLAPI', {
+    this.api = new appsync.GraphqlApi(this, 'GraphQL', {
       name: `${config.appSyncConfig.name}-${config.environment}`,
-      definition: appsync.Definition.fromFile(path.join(__dirname, '../../../schema/schema.graphql')),
+      definition: appsync.Definition.fromFile(path.join(__dirname, '../../schema/schema.graphql')),
       authorizationConfig: {
         defaultAuthorization: {
           authorizationType: appsync.AuthorizationType.USER_POOL,
@@ -205,13 +205,13 @@ export class AppSyncStack extends Construct {
     };
 
     // Query Resolvers
-    this.createQueryResolvers(commonLambdaProps);
+    this.createQueryResolvers(config, commonLambdaProps);
 
     // Mutation Resolvers
-    this.createMutationResolvers(commonLambdaProps);
+    this.createMutationResolvers(config, commonLambdaProps);
 
     // Subscription Resolvers
-    this.createSubscriptionResolvers(commonLambdaProps);
+    this.createSubscriptionResolvers(config, commonLambdaProps);
 
     // Data Sources
     this.createDataSources();
@@ -225,16 +225,16 @@ export class AppSyncStack extends Construct {
     cdk.Tags.of(this.api).add('Service', 'GraphQL');
   }
 
-  private createQueryResolvers(commonProps: nodejs.NodejsFunctionProps) {
+  private createQueryResolvers(config: EnvironmentConfig, commonProps: nodejs.NodejsFunctionProps) {
     // Tenant queries
     this.resolverFunctions[LAMBDA_FUNCTION_NAMES.GET_TENANT] = new nodejs.NodejsFunction(
       this,
       'GetTenantFunction',
       {
         ...commonProps,
-        entry: path.join(__dirname, '../../../src/resolvers/query/getTenant.ts'),
+        entry: path.join(__dirname, '../../src/resolvers/query/getTenant.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-getTenant-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-getTenant-${config.environment}`,
       }
     );
 
@@ -245,7 +245,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/listTenants.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-listTenants-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-listTenants-${config.environment}`,
       }
     );
 
@@ -257,7 +257,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/getProject.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-getProject-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-getProject-${config.environment}`,
       }
     );
 
@@ -266,7 +266,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/listProjectsByTenant.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-listProjectsByTenant-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-listProjectsByTenant-${config.environment}`,
       });
 
     // Analysis queries
@@ -277,7 +277,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/getAnalysis.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-getAnalysis-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-getAnalysis-${config.environment}`,
       }
     );
 
@@ -286,7 +286,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/listAnalysesByProject.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-listAnalysesByProject-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-listAnalysesByProject-${config.environment}`,
       });
 
     // Dashboard queries
@@ -297,7 +297,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/getDashboardMetrics.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-getDashboardMetrics-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-getDashboardMetrics-${config.environment}`,
       }
     );
 
@@ -309,7 +309,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/framework/listFrameworks.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-listFrameworks-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-listFrameworks-${config.environment}`,
       }
     );
 
@@ -320,7 +320,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/framework/getFramework.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-getFramework-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-getFramework-${config.environment}`,
       }
     );
 
@@ -332,7 +332,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/getUserProfile.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-getUserProfile-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-getUserProfile-${config.environment}`,
       }
     );
 
@@ -344,7 +344,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/getAnalysisFindings.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-getAnalysisFindings-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-getAnalysisFindings-${config.environment}`,
       }
     );
 
@@ -355,7 +355,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/query/framework/listFrameworkRules.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-listFrameworkRules-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-listFrameworkRules-${config.environment}`,
       }
     );
 
@@ -367,11 +367,11 @@ export class AppSyncStack extends Construct {
           '../../src/resolvers/query/framework/getTenantFrameworkConfig.ts'
         ),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-getTenantFrameworkConfig-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-getTenantFrameworkConfig-${config.environment}`,
       });
   }
 
-  private createMutationResolvers(commonProps: nodejs.NodejsFunctionProps) {
+  private createMutationResolvers(config: EnvironmentConfig, commonProps: nodejs.NodejsFunctionProps) {
     // Project mutations
     this.resolverFunctions[LAMBDA_FUNCTION_NAMES.CREATE_PROJECT] = new nodejs.NodejsFunction(
       this,
@@ -380,7 +380,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/mutation/createProject.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-createProject-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-createProject-${config.environment}`,
       }
     );
 
@@ -391,7 +391,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/mutation/updateProject.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-updateProject-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-updateProject-${config.environment}`,
       }
     );
 
@@ -403,7 +403,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/mutation/createAnalysis.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-createAnalysis-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-createAnalysis-${config.environment}`,
       }
     );
 
@@ -414,7 +414,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/mutation/startAnalysis.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-startAnalysis-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-startAnalysis-${config.environment}`,
       }
     );
 
@@ -426,7 +426,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/mutation/generateReport.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-generateReport-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-generateReport-${config.environment}`,
       }
     );
 
@@ -438,7 +438,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/mutation/framework/createFrameworkSet.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-createFrameworkSet-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-createFrameworkSet-${config.environment}`,
       }
     );
 
@@ -450,7 +450,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/mutation/createAnalysisWithLiveScan.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-createAnalysisWithLiveScan-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-createAnalysisWithLiveScan-${config.environment}`,
       }
     );
 
@@ -462,7 +462,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/mutation/generateReportEnhanced.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-generateReportEnhanced-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-generateReportEnhanced-${config.environment}`,
       }
     );
 
@@ -474,7 +474,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/mutation/updateUserProfile.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-updateUserProfile-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-updateUserProfile-${config.environment}`,
       }
     );
 
@@ -485,7 +485,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/mutation/framework/updateFrameworkSet.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-updateFrameworkSet-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-updateFrameworkSet-${config.environment}`,
       }
     );
 
@@ -496,7 +496,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/resolvers/mutation/framework/deleteFrameworkSet.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-deleteFrameworkSet-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-deleteFrameworkSet-${config.environment}`,
       }
     );
 
@@ -508,7 +508,7 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/functions/framework-initialization/handler.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-frameworkInitialization-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-frameworkInitialization-${config.environment}`,
         timeout: cdk.Duration.minutes(5), // Longer timeout for initialization
         memorySize: 1024, // Higher memory for processing
       }
@@ -521,14 +521,14 @@ export class AppSyncStack extends Construct {
         ...commonProps,
         entry: path.join(__dirname, '../../src/functions/framework-analysis/handler.ts'),
         handler: 'handler',
-        functionName: `${commonProps.environment.SERVICE_NAME}-frameworkAnalysis-${commonProps.environment.ENVIRONMENT}`,
+        functionName: `${config.appSyncConfig.name}-frameworkAnalysis-${config.environment}`,
         timeout: cdk.Duration.minutes(15), // Long timeout for comprehensive analysis
         memorySize: 2048, // High memory for processing large datasets
       }
     );
   }
 
-  private createSubscriptionResolvers(_commonProps: nodejs.NodejsFunctionProps) {
+  private createSubscriptionResolvers(_config: EnvironmentConfig, _commonProps: nodejs.NodejsFunctionProps) {
     // Subscription resolvers are handled by AppSync's built-in subscription mechanism
     // No separate Lambda functions needed for basic subscriptions
   }

@@ -11,7 +11,7 @@ import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 
 const logger = new Logger({
   serviceName: 'framework-analysis',
-  logLevel: process.env.LOG_LEVEL || 'INFO',
+  logLevel: (process.env.LOG_LEVEL as 'DEBUG' | 'INFO' | 'WARN' | 'ERROR') || 'INFO',
 });
 
 interface AnalysisInput {
@@ -92,19 +92,20 @@ export const handler = async (input: AnalysisInput): Promise<AnalysisOutput> => 
 
     return {
       analysisId: input.analysisId,
-      status: result.status,
+      status: result.status as 'COMPLETED' | 'FAILED' | 'PARTIAL',
       result,
     };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('Framework analysis failed', { 
       analysisId: input.analysisId,
-      error: error.message 
+      error: errorMessage 
     });
 
     // Update analysis status to FAILED
     await updateAnalysisStatus(input.analysisId, 'FAILED', {
       endTime: new Date().toISOString(),
-      error: error.message,
+      error: errorMessage,
     });
 
     return {
@@ -144,9 +145,9 @@ export const handler = async (input: AnalysisInput): Promise<AnalysisOutput> => 
           frameworkScores: {},
           recommendations: [],
         },
-        metadata: { error: error.message },
+        metadata: { error: errorMessage },
       },
-      error: error.message,
+      error: errorMessage,
     };
   }
 };
@@ -178,7 +179,7 @@ async function loadResources(input: AnalysisInput): Promise<any[]> {
         s3Key: input.resourcesS3Key,
         error 
       });
-      throw new Error(`Failed to load resources from S3: ${error.message}`);
+      throw new Error(`Failed to load resources from S3: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -291,7 +292,7 @@ async function saveAnalysisResults(
     });
   } catch (error) {
     logger.error('Failed to save analysis results', { analysisId, error });
-    throw new Error(`Failed to save analysis results: ${error.message}`);
+    throw new Error(`Failed to save analysis results: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

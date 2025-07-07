@@ -222,16 +222,21 @@ export class StepFunctionsStack extends Construct {
         'analysisId.$': '$.analysisId',
         'failedAt.$': '$$.State.EnteredTime',
       },
-      next: analysisFailed,
     });
+
+    // Connect the analysis flow to results processing
+    runFrameworkAnalysis
+      .next(extractResults)
+      .next(storeResults)
+      .next(analysisSucceeded);
 
     // Chain the steps together
     const definition = validateInput
       .next(initializeAnalysis)
-      .next(frameworkInitChoice)
-      .next(extractResults)
-      .next(storeResults)
-      .next(analysisSucceeded);
+      .next(frameworkInitChoice);
+
+    // Connect error handler to failure state
+    handleError.next(analysisFailed);
 
     // Add error handling
     initializeAnalysis.addCatch(handleError, {
@@ -265,7 +270,7 @@ export class StepFunctionsStack extends Construct {
 
   private createReportGenerationStateMachine(
     config: EnvironmentConfig,
-    resolverFunctions: Record<string, lambda.Function>,
+    _resolverFunctions: Record<string, lambda.Function>,
     role: iam.Role,
     logGroup: logs.LogGroup
   ): stepfunctions.StateMachine {
@@ -375,25 +380,28 @@ export class StepFunctionsStack extends Construct {
       comment: 'Report generation completed successfully',
     });
 
-    // Failure State
-    const reportGenerationFailed = new stepfunctions.Fail(this, 'ReportGenerationFailed', {
+    // Failure State (will be used when error handling is implemented)
+    const _reportGenerationFailed = new stepfunctions.Fail(this, 'ReportGenerationFailed', {
       comment: 'Report generation failed',
       causePath: '$.errorMessage',
       errorPath: '$.errorType',
     });
-
-    // Chain the steps together
-    const definition = initializeReportGeneration
-      .next(fetchAnalysisData)
-      .next(formatChoice)
-      .next(storeReportMetadata)
-      .next(reportGenerationSucceeded);
 
     // Connect format branches to metadata storage
     generatePdfReport.next(storeReportMetadata);
     generateExcelReport.next(storeReportMetadata);
     generateJsonReport.next(storeReportMetadata);
     generateHtmlReport.next(storeReportMetadata);
+    
+    // Connect metadata storage to success
+    storeReportMetadata.next(reportGenerationSucceeded);
+
+    // Chain the steps together (formatChoice branches are defined above)
+    const definition = initializeReportGeneration
+      .next(fetchAnalysisData)
+      .next(formatChoice);
+
+    // Note: Error handling for report generation will be added with actual implementation states
 
     return new stepfunctions.StateMachine(this, 'ReportGenerationStateMachine', {
       stateMachineName: `ReportGenerationWorkflow-${config.environment}`,
