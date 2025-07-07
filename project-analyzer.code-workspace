@@ -9,6 +9,8 @@
 			"eslintcache",
 			"eventbridge",
 			"OPFS",
+			"QLAPI",
+			"stepfunctions",
 			"VARCHAR"
 		],
 		"files.autoSave": "afterDelay",
