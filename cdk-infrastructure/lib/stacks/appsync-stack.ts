@@ -12,9 +12,6 @@ import { Construct } from 'constructs';
 import { EnvironmentConfig } from '../config/environments';
 import { LAMBDA_FUNCTION_NAMES } from '../config/constants';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface AppSyncStackProps {
   config: EnvironmentConfig;
@@ -44,7 +41,7 @@ export class AppSyncStack extends Construct {
     // GraphQL API
     this.api = new appsync.GraphqlApi(this, 'GraphQLAPI', {
       name: `${config.appSyncConfig.name}-${config.environment}`,
-      definition: appsync.Definition.fromFile(path.join(__dirname, '../../schema/schema.graphql')),
+      definition: appsync.Definition.fromFile(path.join(__dirname, '../../../schema/schema.graphql')),
       authorizationConfig: {
         defaultAuthorization: {
           authorizationType: appsync.AuthorizationType.USER_POOL,
@@ -235,7 +232,7 @@ export class AppSyncStack extends Construct {
       'GetTenantFunction',
       {
         ...commonProps,
-        entry: path.join(__dirname, '../../src/resolvers/query/getTenant.ts'),
+        entry: path.join(__dirname, '../../../src/resolvers/query/getTenant.ts'),
         handler: 'handler',
         functionName: `${commonProps.environment.SERVICE_NAME}-getTenant-${commonProps.environment.ENVIRONMENT}`,
       }
@@ -500,6 +497,33 @@ export class AppSyncStack extends Construct {
         entry: path.join(__dirname, '../../src/resolvers/mutation/framework/deleteFrameworkSet.ts'),
         handler: 'handler',
         functionName: `${commonProps.environment.SERVICE_NAME}-deleteFrameworkSet-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
+
+    // Framework Engine Functions
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.FRAMEWORK_INITIALIZATION] = new nodejs.NodejsFunction(
+      this,
+      'FrameworkInitializationFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/functions/framework-initialization/handler.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-frameworkInitialization-${commonProps.environment.ENVIRONMENT}`,
+        timeout: cdk.Duration.minutes(5), // Longer timeout for initialization
+        memorySize: 1024, // Higher memory for processing
+      }
+    );
+
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.FRAMEWORK_ANALYSIS] = new nodejs.NodejsFunction(
+      this,
+      'FrameworkAnalysisFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/functions/framework-analysis/handler.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-frameworkAnalysis-${commonProps.environment.ENVIRONMENT}`,
+        timeout: cdk.Duration.minutes(15), // Long timeout for comprehensive analysis
+        memorySize: 2048, // High memory for processing large datasets
       }
     );
   }

@@ -6,6 +6,7 @@ import { DataStack } from './data-stack';
 import { AppSyncStack } from './appsync-stack';
 import { StorageStack } from './storage-stack';
 import { MonitoringStack } from './monitoring-stack';
+import { StepFunctionsStack } from './step-functions-stack';
 
 export class MainStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ExtendedStackProps) {
@@ -31,7 +32,7 @@ export class MainStack extends cdk.Stack {
       description: 'S3 buckets and storage infrastructure',
     });
 
-    // AppSync GraphQL API スタック
+    // AppSync GraphQL API スタック (一時的に Step Functions なしで作成)
     const appSyncStack = new AppSyncStack(this, 'AppSync', {
       config,
       userPool: authStack.userPool,
@@ -40,6 +41,19 @@ export class MainStack extends cdk.Stack {
       tables: dataStack.tables,
       buckets: storageStack.buckets,
       description: 'AppSync GraphQL API and Lambda resolvers',
+    });
+
+    // Step Functions ワークフロースタック
+    const stepFunctionsStack = new StepFunctionsStack(this, 'StepFunctions', {
+      config,
+      resolverFunctions: appSyncStack.resolverFunctions,
+      description: 'Step Functions workflows for analysis and report generation',
+    });
+
+    // Step Functions ARNs を AppSync の Lambda 関数の環境変数に追加
+    Object.values(appSyncStack.resolverFunctions).forEach(func => {
+      func.addEnvironment('ANALYSIS_STATE_MACHINE_ARN', stepFunctionsStack.analysisStateMachine.stateMachineArn);
+      func.addEnvironment('REPORT_GENERATION_STATE_MACHINE_ARN', stepFunctionsStack.reportGenerationStateMachine.stateMachineArn);
     });
 
     // モニタリングスタック (CloudWatch, X-Ray)
@@ -97,6 +111,19 @@ export class MainStack extends cdk.Stack {
       value: appSyncStack.api.apiKey || 'N/A',
       description: 'AppSync GraphQL API Key (if enabled)',
       exportName: `${id}-GraphQLApiKey`,
+    });
+
+    // Step Functions outputs
+    new cdk.CfnOutput(this, 'AnalysisStateMachineArn', {
+      value: stepFunctionsStack.analysisStateMachine.stateMachineArn,
+      description: 'Analysis State Machine ARN',
+      exportName: `${id}-AnalysisStateMachineArn`,
+    });
+
+    new cdk.CfnOutput(this, 'ReportGenerationStateMachineArn', {
+      value: stepFunctionsStack.reportGenerationStateMachine.stateMachineArn,
+      description: 'Report Generation State Machine ARN',
+      exportName: `${id}-ReportGenerationStateMachineArn`,
     });
 
     // S3 Bucket outputs

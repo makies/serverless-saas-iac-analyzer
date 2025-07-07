@@ -6,6 +6,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import { EnvironmentConfig } from '../config/environments';
+import { LAMBDA_FUNCTION_NAMES } from '../config/constants';
 
 export interface StepFunctionsStackProps {
   config: EnvironmentConfig;
@@ -132,55 +133,59 @@ export class StepFunctionsStack extends Construct {
       resultPath: '$.validation',
     });
 
-    // Multi-Framework Analysis Task (Parallel execution)
-    const runWellArchitectedAnalysis = new stepfunctions.Pass(this, 'RunWellArchitectedAnalysis', {
-      comment: 'Run AWS Well-Architected Framework analysis',
-      result: stepfunctions.Result.fromObject({
-        framework: 'well-architected',
-        status: 'completed',
-        findings: [],
+    // Framework Initialization Task
+    const initializeFrameworks = new sfnTasks.LambdaInvoke(this, 'InitializeFrameworks', {
+      lambdaFunction: resolverFunctions[LAMBDA_FUNCTION_NAMES.FRAMEWORK_INITIALIZATION],
+      payload: stepfunctions.TaskInput.fromObject({
+        action: 'initialize',
+        force: false,
       }),
-      resultPath: '$.frameworks.wellArchitected',
+      outputPath: '$.Payload',
+      retryOnServiceExceptions: true,
     });
 
-    const runSecurityAnalysis = new stepfunctions.Pass(this, 'RunSecurityAnalysis', {
-      comment: 'Run security-focused analysis',
-      result: stepfunctions.Result.fromObject({
-        framework: 'security',
-        status: 'completed',
-        findings: [],
-      }),
-      resultPath: '$.frameworks.security',
-    });
-
-    const runCostOptimizationAnalysis = new stepfunctions.Pass(this, 'RunCostOptimizationAnalysis', {
-      comment: 'Run cost optimization analysis',
-      result: stepfunctions.Result.fromObject({
-        framework: 'cost-optimization',
-        status: 'completed',
-        findings: [],
-      }),
-      resultPath: '$.frameworks.costOptimization',
-    });
-
-    // Parallel framework analysis execution
-    const parallelAnalysis = new stepfunctions.Parallel(this, 'ParallelFrameworkAnalysis', {
-      comment: 'Run multiple framework analyses in parallel',
-      resultPath: '$.parallelResults',
-    });
-
-    parallelAnalysis.branch(runWellArchitectedAnalysis);
-    parallelAnalysis.branch(runSecurityAnalysis);
-    parallelAnalysis.branch(runCostOptimizationAnalysis);
-
-    // Aggregate Results Task
-    const aggregateResults = new stepfunctions.Pass(this, 'AggregateResults', {
-      comment: 'Aggregate analysis results from all frameworks',
-      parameters: {
+    // Multi-Framework Analysis Task
+    const runFrameworkAnalysis = new sfnTasks.LambdaInvoke(this, 'RunFrameworkAnalysis', {
+      lambdaFunction: resolverFunctions[LAMBDA_FUNCTION_NAMES.FRAMEWORK_ANALYSIS],
+      payload: stepfunctions.TaskInput.fromObject({
         'analysisId.$': '$.analysisId',
-        'overallScore.$': '$.parallelResults[0].score',
-        'totalFindings.$': 'States.ArrayLength($.parallelResults[*].findings[*])',
-        'frameworks.$': '$.parallelResults',
+        'tenantId.$': '$.tenantId',
+        'projectId.$': '$.projectId',
+        'frameworks.$': '$.frameworks',
+        'resourcesS3Key.$': '$.resourcesS3Key',
+        'resources.$': '$.resources',
+        'settings': {
+          'parallelExecution': true,
+          'timeout': 900000, // 15 minutes
+          'strictMode': false,
+        },
+      }),
+      outputPath: '$.Payload',
+      retryOnServiceExceptions: true,
+      timeout: cdk.Duration.minutes(15),
+    });
+
+    // Conditional Framework Initialization
+    const frameworkInitChoice = new stepfunctions.Choice(this, 'CheckFrameworkInitialization')
+      .when(
+        stepfunctions.Condition.stringEquals('$.requiresInitialization', 'true'),
+        initializeFrameworks
+      )
+      .otherwise(runFrameworkAnalysis);
+
+    // Connect initialization to analysis
+    initializeFrameworks.next(runFrameworkAnalysis);
+
+    // Extract Results Task
+    const extractResults = new stepfunctions.Pass(this, 'ExtractResults', {
+      comment: 'Extract analysis results from framework analysis response',
+      parameters: {
+        'analysisId.$': '$.result.analysisId',
+        'status.$': '$.result.status',
+        'overallScore.$': '$.result.aggregatedSummary.overallScore',
+        'totalFindings.$': '$.result.aggregatedSummary.totalFindings',
+        'frameworks.$': '$.result.frameworks',
+        'aggregatedSummary.$': '$.result.aggregatedSummary',
         'completedAt.$': '$$.State.EnteredTime',
       },
       resultPath: '$.aggregated',
@@ -223,8 +228,8 @@ export class StepFunctionsStack extends Construct {
     // Chain the steps together
     const definition = validateInput
       .next(initializeAnalysis)
-      .next(parallelAnalysis)
-      .next(aggregateResults)
+      .next(frameworkInitChoice)
+      .next(extractResults)
       .next(storeResults)
       .next(analysisSucceeded);
 
@@ -234,7 +239,12 @@ export class StepFunctionsStack extends Construct {
       resultPath: '$.error',
     });
 
-    parallelAnalysis.addCatch(handleError, {
+    initializeFrameworks.addCatch(handleError, {
+      errors: ['States.ALL'],
+      resultPath: '$.error',
+    });
+
+    runFrameworkAnalysis.addCatch(handleError, {
       errors: ['States.ALL'],
       resultPath: '$.error',
     });

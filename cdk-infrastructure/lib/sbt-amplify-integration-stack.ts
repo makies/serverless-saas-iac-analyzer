@@ -9,9 +9,6 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import { EnvironmentConfig } from './config/environments';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface SBTAmplifyIntegrationStackProps extends cdk.StackProps {
   config: EnvironmentConfig;

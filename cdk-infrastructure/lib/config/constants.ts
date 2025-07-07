@@ -199,6 +199,10 @@ export const LAMBDA_FUNCTION_NAMES = {
   ANALYSIS_WORKER: 'analysisWorker',
   REPORT_WORKER: 'reportWorker',
   NOTIFICATION_WORKER: 'notificationWorker',
+
+  // Framework Engine Functions
+  FRAMEWORK_INITIALIZATION: 'frameworkInitialization',
+  FRAMEWORK_ANALYSIS: 'frameworkAnalysis',
 } as const;
 
 // CloudWatch メトリクス
