@@ -19,6 +19,8 @@ node = "22"
 uv = "latest"
 "pipx:cfn-lint" = "latest"
 "pipx:checkov" = "latest"
+"npm:@vscode/vsce" = "latest"
+"go:oss.terrastruct.com/d2" = "latest"
 
 [tasks]
 # Root project tasks

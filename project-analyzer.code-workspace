@@ -11,9 +11,12 @@
 			"OPFS",
 			"QLAPI",
 			"stepfunctions",
+			"terrastruct",
 			"VARCHAR"
 		],
 		"files.autoSave": "afterDelay",
-		"workbench.colorTheme": "Next.js Monokai Classic"
+		"workbench.colorTheme": "Next.js Monokai Classic",
+		"D2.execPath": "/Users/m_fujiwara/.local/share/mise/installs/go-oss-terrastruct-com-d2/0.7.0/bin/d2",
+		"D2.previewSketch": true
 	}
 }

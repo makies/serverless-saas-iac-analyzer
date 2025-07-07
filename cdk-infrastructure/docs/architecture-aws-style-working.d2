@@ -1,0 +1,595 @@
+# Cloud Best Practice Analyzer - AWS Architecture (Official AWS Style Guide Compliant)
+
+direction: right
+
+# AWS Official Style Configuration (Based on AWS Architecture Icons Deck)
+vars: {
+  # AWS Official Brand Colors
+  aws-orange: "#FF9900"          # Primary AWS Orange
+  aws-dark-blue: "#232F3E"       # AWS Dark Blue
+  aws-light-blue: "#4B92DB"      # Service Blue
+  aws-green: "#7AA116"           # Storage Green
+  aws-red: "#DD344C"             # Security Red
+  aws-purple: "#C925D1"          # Monitoring Purple
+  aws-teal: "#01A88D"            # AI/ML Teal
+  aws-gray: "#879196"            # External Gray
+  aws-white: "#FFFFFF"           # Background White
+  
+  # AWS Official Typography Colors
+  text-primary: "#232F3E"        # Primary text
+  text-secondary: "#546E7A"      # Secondary text
+  
+  # AWS Official Line Styles
+  line-thick: 3                  # Primary connections
+  line-medium: 2                 # Secondary connections
+  line-thin: 1                   # Supporting connections
+}
+
+# User Layer (AWS Official Style)
+users: {
+  label: "Users"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-dark-blue}"
+    stroke-width: "${line-medium}"
+    border-radius: 4
+    stroke-dash: 8
+    font-size: 14
+    font-color: "${text-primary}"
+    font-style: bold
+  }
+
+  web_users: {
+    label: "Web Users"
+    icon: https://icons.terrastruct.com/essentials%2F359-users.svg
+    shape: image
+  }
+
+  admin_users: {
+    label: "Admin Users"
+    icon: https://icons.terrastruct.com/essentials%2F005-programmer.svg
+    shape: image
+  }
+}
+
+# Frontend Services (AWS Official Style)
+frontend: {
+  label: "Frontend & CDN"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-orange}"
+    stroke-width: "${line-medium}"
+    border-radius: 4
+    stroke-dash: 8
+    font-size: 14
+    font-color: "${text-primary}"
+    font-style: bold
+  }
+
+  amplify: {
+    label: "AWS Amplify\nHosting"
+    icon: https://icons.terrastruct.com/aws%2FMobile%2FAWS-Amplify.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-orange}"
+      stroke-width: "${line-thin}"
+      border-radius: 3
+      shadow: false
+      font-size: 11
+      font-color: "${text-primary}"
+    }
+  }
+
+  cloudfront: {
+    label: "Amazon CloudFront\nCDN"
+    icon: https://icons.terrastruct.com/aws%2FNetworking%20&%20Content%20Delivery%2FAmazon-CloudFront.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-orange}"
+      stroke-width: "${line-thin}"
+      border-radius: 3
+      shadow: false
+      font-size: 11
+      font-color: "${text-primary}"
+    }
+  }
+
+  rum: {
+    label: "CloudWatch RUM\nReal User Monitoring"
+    shape: rectangle
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-orange}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      3d: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+}
+
+# API & Authentication (AWS Official Style)
+api_auth: {
+  label: "API & Authentication"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-light-blue}"
+    stroke-width: "${line-medium}"
+    border-radius: 4
+    stroke-dash: 8
+    font-size: 14
+    font-color: "${text-primary}"
+    font-style: bold
+  }
+
+  appsync: {
+    label: "AWS AppSync\nGraphQL API"
+    icon: https://icons.terrastruct.com/aws%2FMobile%2FAWS-AppSync.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-light-blue}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+
+  api_gateway: {
+    label: "Amazon API Gateway\nREST API"
+    icon: https://icons.terrastruct.com/aws%2FMobile%2FAmazon-API-Gateway.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-light-blue}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+
+  cognito: {
+    label: "Amazon Cognito\nUser Authentication"
+    icon: https://icons.terrastruct.com/aws%2FSecurity%2C%20Identity%2C%20&%20Compliance%2FAmazon-Cognito.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-light-blue}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+}
+
+# Compute Services
+compute: {
+  label: "⚡ Compute & Orchestration"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-orange}"
+    stroke-width: 2
+    border-radius: 8
+    stroke-dash: 5
+    font-size: 16
+    font-color: "${aws-orange}"
+  }
+
+  lambda: {
+    label: "AWS Lambda\nServerless Functions"
+    icon: https://icons.terrastruct.com/aws/Compute/AWS-Lambda.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-orange}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+
+  step_functions: {
+    label: "AWS Step Functions\nWorkflow Orchestration"
+    icon: https://icons.terrastruct.com/aws%2F_Group%20Icons%2FAWS-Step-Function_light-bg.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-orange}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+}
+
+# AI/ML Services
+ai_ml: {
+  label: "🤖 AI/ML Services"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-teal}"
+    stroke-width: 2
+    border-radius: 8
+    stroke-dash: 5
+    font-size: 16
+    font-color: "${aws-teal}"
+  }
+
+  bedrock: {
+    label: "🤖 Amazon Bedrock\nClaude 3.5 Sonnet"
+    shape: oval
+    style: {
+      fill: "#ffffff"
+      stroke: "#01A88D"
+    }
+  }
+}
+
+# Data Storage
+storage: {
+  label: "Data Storage"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-green}"
+    stroke-width: 2
+    border-radius: 8
+    stroke-dash: 5
+    font-size: 16
+    font-color: "${aws-green}"
+  }
+
+  dynamodb: {
+    label: "Amazon DynamoDB\nNoSQL Database"
+    icon: https://icons.terrastruct.com/aws%2FDatabase%2FAmazon-DynamoDB.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-green}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+
+  s3: {
+    label: "Amazon S3\nObject Storage"
+    icon: https://icons.terrastruct.com/aws%2FStorage%2FAmazon-Simple-Storage-Service-S3_Bucket_light-bg.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-green}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+}
+
+# Monitoring & Management
+monitoring: {
+  label: "📈 Monitoring & Observability"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-purple}"
+    stroke-width: 2
+    border-radius: 8
+    stroke-dash: 5
+    font-size: 16
+    font-color: "${aws-purple}"
+  }
+
+  cloudwatch: {
+    label: "Amazon CloudWatch\nMonitoring & Logging"
+    icon: https://icons.terrastruct.com/aws%2FManagement%20&%20Governance%2FAmazon-CloudWatch.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-purple}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+
+  xray: {
+    label: "AWS X-Ray\nDistributed Tracing"
+    icon: https://icons.terrastruct.com/aws%2FDeveloper%20Tools%2FAWS-X-Ray.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-purple}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+
+  eventbridge: {
+    label: "Amazon EventBridge\nEvent Bus"
+    icon: https://icons.terrastruct.com/aws%2FApplication%20Integration%2FAmazon-EventBridge.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-purple}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+}
+
+# Security & Compliance
+security: {
+  label: "🔒 Security & Compliance"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-red}"
+    stroke-width: 2
+    border-radius: 8
+    stroke-dash: 5
+    font-size: 16
+    font-color: "${aws-red}"
+  }
+
+  iam: {
+    label: "AWS IAM\nIdentity & Access Management"
+    icon: https://icons.terrastruct.com/aws%2FSecurity%2C%20Identity%2C%20&%20Compliance%2FAWS-Identify-and-Access-Management_IAM.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-red}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+
+  vpc: {
+    label: "Amazon VPC\nVirtual Private Cloud"
+    icon: https://icons.terrastruct.com/aws%2FNetworking%20&%20Content%20Delivery%2FAmazon-VPC.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-red}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+}
+
+# External Systems
+external: {
+  label: "🌍 External & IaC"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-gray}"
+    stroke-width: 2
+    border-radius: 8
+    stroke-dash: 5
+    font-size: 16
+    font-color: "${aws-gray}"
+  }
+
+  cloudformation: {
+    label: "AWS CloudFormation\nInfrastructure as Code"
+    icon: https://icons.terrastruct.com/aws%2FManagement%20&%20Governance%2FAWS-CloudFormation.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-gray}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+
+  terraform: {
+    label: "🌍 Terraform\nInfrastructure as Code"
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#879196"
+    }
+  }
+
+  cdk: {
+    label: "AWS CDK\nCloud Development Kit"
+    icon: https://icons.terrastruct.com/aws%2FDeveloper%20Tools%2FAWS-Cloud-Development-Kit.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-gray}"
+      stroke-width: 2
+      border-radius: 6
+      shadow: true
+      font-size: 12
+      font-color: "${aws-dark-blue}"
+    }
+  }
+}
+
+# Data Flow Connections
+users.web_users -> frontend.cloudfront: {
+  style: {
+    stroke: "#232F3E"
+    stroke-width: 2
+    stroke-dash: 5
+  }
+}
+
+users.admin_users -> frontend.cloudfront: {
+  style: {
+    stroke: "#232F3E"
+    stroke-width: 2
+    stroke-dash: 5
+  }
+}
+
+frontend.cloudfront -> frontend.amplify: {
+  style: {
+    stroke: "#FF9900"
+    stroke-width: 3
+  }
+}
+
+frontend.amplify -> api_auth.appsync: {
+  label: "GraphQL\nQueries/Mutations"
+  style: {
+    stroke: "#FF9900"
+    stroke-width: 3
+  }
+}
+
+frontend.amplify -> api_auth.cognito: {
+  label: "Authentication"
+  style: {
+    stroke: "#FF9900"
+    stroke-width: 3
+  }
+}
+
+api_auth.appsync -> compute.lambda: {
+  label: "Invoke\nResolvers"
+  style: {
+    stroke: "#FF9900"
+    stroke-width: 3
+  }
+}
+
+api_auth.api_gateway -> compute.lambda: {
+  label: "REST API\nCalls"
+  style: {
+    stroke: "#FF9900"
+    stroke-width: 3
+  }
+}
+
+compute.lambda -> compute.step_functions: {
+  label: "Start\nWorkflows"
+  style: {
+    stroke: "#FF9900"
+    stroke-width: 3
+  }
+}
+
+compute.step_functions -> ai_ml.bedrock: {
+  label: "AI Analysis\nRequests"
+  style: {
+    stroke: "#01A88D"
+    stroke-width: 3
+  }
+}
+
+compute.lambda -> storage.dynamodb: {
+  label: "Read/Write\nData"
+  style: {
+    stroke: "#7AA116"
+    stroke-width: 3
+  }
+}
+
+compute.step_functions -> storage.s3: {
+  label: "Store\nReports"
+  style: {
+    stroke: "#7AA116"
+    stroke-width: 3
+  }
+}
+
+compute.step_functions -> external.cloudformation: {
+  label: "Analyze\nTemplates"
+  style: {
+    stroke: "#879196"
+    stroke-width: 2
+    stroke-dash: 5
+  }
+}
+
+compute.step_functions -> external.terraform: {
+  label: "Analyze\nConfigs"
+  style: {
+    stroke: "#879196"
+    stroke-width: 2
+    stroke-dash: 5
+  }
+}
+
+compute.step_functions -> external.cdk: {
+  label: "Analyze\nCode"
+  style: {
+    stroke: "#879196"
+    stroke-width: 2
+    stroke-dash: 5
+  }
+}
+
+frontend.rum -> monitoring.cloudwatch: {
+  label: "Client\nMetrics"
+  style: {
+    stroke: "#C925D1"
+    stroke-width: 2
+  }
+}
+
+compute.lambda -> monitoring.cloudwatch: {
+  label: "Logs &\nMetrics"
+  style: {
+    stroke: "#C925D1"
+    stroke-width: 2
+  }
+}
+
+compute.step_functions -> monitoring.xray: {
+  label: "Distributed\nTracing"
+  style: {
+    stroke: "#C925D1"
+    stroke-width: 2
+  }
+}
+
+compute.lambda -> monitoring.eventbridge: {
+  label: "Publish\nEvents"
+  style: {
+    stroke: "#C925D1"
+    stroke-width: 2
+  }
+}
+
+api_auth.cognito -> security.iam: {
+  label: "Role\nAssumption"
+  style: {
+    stroke: "#DD344C"
+    stroke-width: 2
+  }
+}

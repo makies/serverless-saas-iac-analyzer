@@ -1,0 +1,661 @@
+# Serverless SaaS IaC Analyzer - AWS Architecture
+# AWS Official Style Guide Compliant (Architecture Icons Deck For Light BG)
+
+direction: right
+
+# Title with proper citation style
+title: {
+  text: "Serverless SaaS IaC Analyzer Architecture on AWS"
+  tooltip: "cite: 001 - Main architecture title and overall system design"
+}
+
+# AWS Official Style Configuration
+vars: {
+  # AWS Official Brand Colors (from PowerPoint style guide)
+  aws-orange: "#FF9900"          # Primary AWS Orange
+  aws-dark-blue: "#232F3E"       # AWS Dark Blue
+  aws-light-blue: "#4B92DB"      # Service Blue
+  aws-green: "#7AA116"           # Storage Green
+  aws-red: "#DD344C"             # Security Red
+  aws-purple: "#C925D1"          # Monitoring Purple
+  aws-teal: "#01A88D"            # AI/ML Teal
+  aws-gray: "#879196"            # External Gray
+  aws-white: "#FFFFFF"           # Background White
+  
+  # AWS Official Typography Colors
+  text-primary: "#232F3E"        # Primary text
+  text-secondary: "#546E7A"      # Secondary text
+  
+  # AWS Official Line Weights (per PowerPoint guide)
+  line-thick: 3                  # Primary data flows
+  line-medium: 2                 # Secondary connections
+  line-thin: 1                   # Supporting connections
+}
+
+# External User Layer (Outside AWS Cloud)
+users: {
+  label: "Users"
+  tooltip: "cite: 002 - External users accessing the system"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-dark-blue}"
+    stroke-width: "${line-medium}"
+    border-radius: 4
+    stroke-dash: 8
+    font-size: 36
+    font-color: "${text-primary}"
+  }
+
+  web_users: {
+    label: "Web Users"
+    tooltip: "cite: 003 - End users accessing via web browser"
+    icon: ./assets/Architecture-Group-Icons_02072025/Server-contents_32.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-dark-blue}"
+      stroke-width: "${line-thin}"
+      border-radius: 3
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+  }
+
+  admin_users: {
+    label: "Admin Users [cite: 004]"
+    icon: ./assets/Architecture-Group-Icons_02072025/Server-contents_32.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-dark-blue}"
+      stroke-width: "${line-thin}"
+      border-radius: 3
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+  }
+}
+
+# AWS Cloud Container (Serverless Services)
+aws_cloud: {
+  label: "AWS Cloud [cite: 005]"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-dark-blue}"
+    stroke-width: "${line-thick}"
+    border-radius: 6
+    stroke-dash: 8
+    font-size: 40
+    font-color: "${text-primary}"
+  }
+
+  # Frontend Services
+  frontend: {
+    label: "Frontend & CDN [cite: 006]"
+    style: {
+      fill: "transparent"
+      stroke: "${aws-orange}"
+      stroke-width: "${line-medium}"
+      border-radius: 3
+      stroke-dash: 8
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+
+    amplify: {
+      label: "AWS Amplify\nHosting [cite: 007]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_Front-End-Web-Mobile/32/Arch_AWS-Amplify_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-orange}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+
+    cloudfront: {
+      label: "CloudFront\nCDN [cite: 008]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_Networking-Content-Delivery/32/Arch_Amazon-CloudFront_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-orange}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+
+    rum: {
+      label: "CloudWatch RUM\nMonitoring [cite: 009]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_Management-Governance/32/Arch_Amazon-CloudWatch_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-orange}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+  }
+
+  # API & Authentication Layer
+  api_auth: {
+    label: "API & Authentication [cite: 010]"
+    style: {
+      fill: "transparent"
+      stroke: "${aws-light-blue}"
+      stroke-width: "${line-medium}"
+      border-radius: 3
+      stroke-dash: 8
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+
+    appsync: {
+      label: "AWS AppSync\nGraphQL API [cite: 011]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_App-Integration/32/Arch_AWS-AppSync_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-light-blue}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+
+    cognito: {
+      label: "Amazon Cognito\nUser & Identity Pools [cite: 012]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_Security-Identity-Compliance/32/Arch_Amazon-Cognito_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-light-blue}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+  }
+
+  # Compute & Orchestration Layer
+  compute: {
+    label: "Compute & Orchestration [cite: 013]"
+    style: {
+      fill: "transparent"
+      stroke: "${aws-orange}"
+      stroke-width: "${line-medium}"
+      border-radius: 3
+      stroke-dash: 8
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+
+    lambda: {
+      label: "AWS Lambda\n20+ Resolver Functions [cite: 014]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_Compute/32/Arch_AWS-Lambda_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-orange}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+
+    step_functions: {
+      label: "AWS Step Functions\nWorkflows [cite: 015]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_App-Integration/32/Arch_AWS-Step-Functions_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-orange}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+  }
+
+  # AI/ML Services
+  ai_ml: {
+    label: "AI/ML Services [cite: 016]"
+    style: {
+      fill: "transparent"
+      stroke: "${aws-teal}"
+      stroke-width: "${line-medium}"
+      border-radius: 3
+      stroke-dash: 8
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+
+    bedrock: {
+      label: "Amazon Bedrock\nClaude 3.5 Sonnet [cite: 017]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_Artificial-Intelligence/32/Arch_Amazon-Bedrock_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-teal}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+  }
+
+  # Data Storage Layer
+  storage: {
+    label: "Data Storage [cite: 018]"
+    style: {
+      fill: "transparent"
+      stroke: "${aws-green}"
+      stroke-width: "${line-medium}"
+      border-radius: 3
+      stroke-dash: 8
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+
+    dynamodb: {
+      label: "Amazon DynamoDB\n11 Multi-Tenant Tables [cite: 019]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_Database/32/Arch_Amazon-DynamoDB_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-green}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+
+    s3: {
+      label: "Amazon S3\nAnalysis Data & Templates [cite: 020]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_Storage/32/Arch_Amazon-Simple-Storage-Service_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-green}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+  }
+
+  # Monitoring & Observability Layer
+  monitoring: {
+    label: "Monitoring & Observability [cite: 021]"
+    style: {
+      fill: "transparent"
+      stroke: "${aws-purple}"
+      stroke-width: "${line-medium}"
+      border-radius: 3
+      stroke-dash: 8
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+
+    cloudwatch: {
+      label: "Amazon CloudWatch\nDashboards & Alarms [cite: 022]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_Management-Governance/32/Arch_Amazon-CloudWatch_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-purple}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+
+    xray: {
+      label: "AWS X-Ray\nDistributed Tracing [cite: 023]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_Developer-Tools/32/Arch_AWS-X-Ray_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-purple}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+
+    eventbridge: {
+      label: "Amazon EventBridge\nEvent Bus [cite: 024]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_App-Integration/32/Arch_Amazon-EventBridge_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-purple}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+
+    sns: {
+      label: "Amazon SNS\nAlarm Notifications [cite: 025]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_App-Integration/32/Arch_Amazon-Simple-Notification-Service_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-purple}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+  }
+
+  # Security & Identity Layer
+  security: {
+    label: "Security & Identity [cite: 026]"
+    style: {
+      fill: "transparent"
+      stroke: "${aws-red}"
+      stroke-width: "${line-medium}"
+      border-radius: 3
+      stroke-dash: 8
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+
+    iam: {
+      label: "AWS IAM\nTenant Isolation Roles [cite: 027]"
+      icon: ./assets/Architecture-Service-Icons_02072025/Arch_Security-Identity-Compliance/32/Arch_AWS-IAM-Identity-Center_32.svg
+      shape: image
+      style: {
+        fill: "${aws-white}"
+        stroke: "${aws-red}"
+        stroke-width: "${line-thin}"
+        border-radius: 3
+        font-size: 24
+        font-color: "${text-primary}"
+      }
+    }
+  }
+}
+
+# External Systems (Outside AWS Cloud)
+external: {
+  label: "External & IaC Sources [cite: 028]"
+  style: {
+    fill: "transparent"
+    stroke: "${aws-gray}"
+    stroke-width: "${line-medium}"
+    border-radius: 4
+    stroke-dash: 8
+    font-size: 28
+    font-color: "${text-primary}"
+  }
+
+  cloudformation: {
+    label: "AWS CloudFormation\nTemplates [cite: 029]"
+    icon: ./assets/Architecture-Service-Icons_02072025/Arch_Management-Governance/32/Arch_AWS-CloudFormation_32.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-gray}"
+      stroke-width: "${line-thin}"
+      border-radius: 3
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+  }
+
+  terraform: {
+    label: "Terraform\nConfigurations [cite: 030]"
+    icon: ./assets/Architecture-Group-Icons_02072025/Corporate-data-center_32.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-gray}"
+      stroke-width: "${line-thin}"
+      border-radius: 3
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+  }
+
+  cdk: {
+    label: "AWS CDK\nCode [cite: 031]"
+    icon: ./assets/Architecture-Service-Icons_02072025/Arch_Developer-Tools/32/Arch_AWS-Cloud-Development-Kit_32.svg
+    shape: image
+    style: {
+      fill: "${aws-white}"
+      stroke: "${aws-gray}"
+      stroke-width: "${line-thin}"
+      border-radius: 3
+      font-size: 28
+      font-color: "${text-primary}"
+    }
+  }
+}
+
+# Data Flow Connections (Serverless Architecture)
+
+# User Access Flows
+users.web_users -> aws_cloud.frontend.cloudfront: {
+  label: "HTTPS Access [cite: 032]"
+  style: {
+    stroke: "${aws-dark-blue}"
+    stroke-width: "${line-medium}"
+    stroke-dash: 3
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+users.admin_users -> aws_cloud.frontend.cloudfront: {
+  label: "Admin Access [cite: 033]"
+  style: {
+    stroke: "${aws-dark-blue}"
+    stroke-width: "${line-medium}"
+    stroke-dash: 3
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+# Frontend to API Layer
+aws_cloud.frontend.cloudfront -> aws_cloud.frontend.amplify: {
+  label: "Route to React App [cite: 034]"
+  style: {
+    stroke: "${aws-orange}"
+    stroke-width: "${line-thick}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+aws_cloud.frontend.amplify -> aws_cloud.api_auth.appsync: {
+  label: "GraphQL Queries/Mutations [cite: 035]"
+  style: {
+    stroke: "${aws-orange}"
+    stroke-width: "${line-thick}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+# Authentication Flow
+aws_cloud.frontend.amplify -> aws_cloud.api_auth.cognito: {
+  label: "User Authentication [cite: 036]"
+  style: {
+    stroke: "${aws-light-blue}"
+    stroke-width: "${line-medium}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+aws_cloud.api_auth.cognito -> aws_cloud.security.iam: {
+  label: "Assume Tenant Roles [cite: 037]"
+  style: {
+    stroke: "${aws-red}"
+    stroke-width: "${line-medium}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+# API to Compute Layer
+aws_cloud.api_auth.appsync -> aws_cloud.compute.lambda: {
+  label: "Invoke Resolvers [cite: 038]"
+  style: {
+    stroke: "${aws-orange}"
+    stroke-width: "${line-thick}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+# Workflow Orchestration
+aws_cloud.compute.lambda -> aws_cloud.compute.step_functions: {
+  label: "Start Analysis Workflows [cite: 039]"
+  style: {
+    stroke: "${aws-orange}"
+    stroke-width: "${line-thick}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+# AI Analysis
+aws_cloud.compute.step_functions -> aws_cloud.ai_ml.bedrock: {
+  label: "Multi-Framework Analysis [cite: 040]"
+  style: {
+    stroke: "${aws-teal}"
+    stroke-width: "${line-thick}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+# Data Storage Operations
+aws_cloud.compute.lambda -> aws_cloud.storage.dynamodb: {
+  label: "Multi-Tenant Data Access [cite: 041]"
+  style: {
+    stroke: "${aws-green}"
+    stroke-width: "${line-thick}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+aws_cloud.compute.step_functions -> aws_cloud.storage.s3: {
+  label: "Store Analysis Results [cite: 042]"
+  style: {
+    stroke: "${aws-green}"
+    stroke-width: "${line-thick}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+# External IaC Analysis
+aws_cloud.compute.step_functions -> external.cloudformation: {
+  label: "Analyze CloudFormation [cite: 043]"
+  style: {
+    stroke: "${aws-gray}"
+    stroke-width: "${line-medium}"
+    stroke-dash: 5
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+aws_cloud.compute.step_functions -> external.terraform: {
+  label: "Analyze Terraform [cite: 044]"
+  style: {
+    stroke: "${aws-gray}"
+    stroke-width: "${line-medium}"
+    stroke-dash: 5
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+aws_cloud.compute.step_functions -> external.cdk: {
+  label: "Analyze CDK Code [cite: 045]"
+  style: {
+    stroke: "${aws-gray}"
+    stroke-width: "${line-medium}"
+    stroke-dash: 5
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+# Monitoring & Observability
+aws_cloud.frontend.rum -> aws_cloud.monitoring.cloudwatch: {
+  label: "Client Metrics [cite: 046]"
+  style: {
+    stroke: "${aws-purple}"
+    stroke-width: "${line-medium}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+aws_cloud.compute.lambda -> aws_cloud.monitoring.cloudwatch: {
+  label: "Function Logs & Metrics [cite: 047]"
+  style: {
+    stroke: "${aws-purple}"
+    stroke-width: "${line-medium}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+aws_cloud.compute.step_functions -> aws_cloud.monitoring.xray: {
+  label: "Workflow Tracing [cite: 048]"
+  style: {
+    stroke: "${aws-purple}"
+    stroke-width: "${line-medium}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+aws_cloud.compute.lambda -> aws_cloud.monitoring.eventbridge: {
+  label: "Publish Events [cite: 049]"
+  style: {
+    stroke: "${aws-purple}"
+    stroke-width: "${line-medium}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}
+
+aws_cloud.monitoring.cloudwatch -> aws_cloud.monitoring.sns: {
+  label: "Alarm Notifications [cite: 050]"
+  style: {
+    stroke: "${aws-purple}"
+    stroke-width: "${line-medium}"
+    font-size: 26
+    font-color: "${text-secondary}"
+  }
+}

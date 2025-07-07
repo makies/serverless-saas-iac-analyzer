@@ -1,0 +1,352 @@
+title: CloudBestPracticeAnalyzer - System Architecture {
+  near: top-center
+  style.font-size: 24
+  style.bold: true
+}
+
+# Frontend Layer
+frontend: Frontend Layer {
+  style.fill: "#E8F4FD"
+  style.stroke: "#1976D2"
+  style.stroke-width: 2
+  
+  react: React Frontend {
+    icon: https://icons.terrastruct.com/dev/react.svg
+    style.fill: "#61DAFB"
+  }
+  
+  cloudscape: Cloudscape Design {
+    icon: https://icons.terrastruct.com/aws/Front%20End%20Web%20Mobile/Amazon-CloudFront.svg
+    style.fill: "#FF9900"
+  }
+  
+  amplify: AWS Amplify {
+    icon: https://icons.terrastruct.com/aws/Mobile/AWS-Amplify.svg
+    style.fill: "#FF9900"
+  }
+}
+
+# API Gateway & Auth Layer
+api_layer: API Gateway & Authentication {
+  style.fill: "#FFF3E0"
+  style.stroke: "#F57C00"
+  style.stroke-width: 2
+  
+  appsync: AWS AppSync {
+    icon: https://icons.terrastruct.com/aws/Mobile/AWS-AppSync.svg
+    style.fill: "#FF9900"
+  }
+  
+  cognito: Amazon Cognito {
+    icon: https://icons.terrastruct.com/aws/Security%20Identity%20Compliance/Amazon-Cognito.svg
+    style.fill: "#FF9900"
+  }
+  
+  waf: AWS WAF {
+    icon: https://icons.terrastruct.com/aws/Security%20Identity%20Compliance/AWS-WAF.svg
+    style.fill: "#FF9900"
+  }
+}
+
+# Compute Layer
+compute: Compute Layer {
+  style.fill: "#F3E5F5"
+  style.stroke: "#7B1FA2"
+  style.stroke-width: 2
+  
+  lambda: AWS Lambda {
+    icon: https://icons.terrastruct.com/aws/Compute/AWS-Lambda.svg
+    style.fill: "#FF9900"
+  }
+  
+  stepfunctions: Step Functions {
+    icon: https://icons.terrastruct.com/aws/Application%20Integration/AWS-Step-Functions.svg
+    style.fill: "#FF9900"
+  }
+  
+  framework_engine: Framework Engine {
+    icon: https://icons.terrastruct.com/aws/Machine%20Learning/Amazon-SageMaker-Model.svg
+    style.fill: "#FF9900"
+  }
+}
+
+# Storage Layer
+storage: Storage Layer {
+  style.fill: "#E8F5E8"
+  style.stroke: "#388E3C"
+  style.stroke-width: 2
+  
+  dynamodb: Amazon DynamoDB {
+    icon: https://icons.terrastruct.com/aws/Database/Amazon-DynamoDB.svg
+    style.fill: "#FF9900"
+  }
+  
+  s3: Amazon S3 {
+    icon: https://icons.terrastruct.com/aws/Storage/Amazon-Simple-Storage-Service-S3.svg
+    style.fill: "#FF9900"
+  }
+  
+  s3_glacier: S3 Glacier {
+    icon: https://icons.terrastruct.com/aws/Storage/Amazon-S3-Glacier.svg
+    style.fill: "#FF9900"
+  }
+}
+
+# AI/ML Layer
+ai_layer: AI/ML Layer {
+  style.fill: "#FCE4EC"
+  style.stroke: "#C2185B"
+  style.stroke-width: 2
+  
+  bedrock: Amazon Bedrock {
+    icon: https://icons.terrastruct.com/aws/Machine%20Learning/Amazon-Bedrock.svg
+    style.fill: "#FF9900"
+  }
+  
+  claude: Claude 4 Sonnet {
+    icon: https://icons.terrastruct.com/aws/Machine%20Learning/Amazon-SageMaker-Training-Job.svg
+    style.fill: "#FF9900"
+  }
+}
+
+# Monitoring & Security
+monitoring: Monitoring & Security {
+  style.fill: "#FFF8E1"
+  style.stroke: "#F9A825"
+  style.stroke-width: 2
+  
+  cloudwatch: CloudWatch {
+    icon: https://icons.terrastruct.com/aws/Management%20Governance/Amazon-CloudWatch.svg
+    style.fill: "#FF9900"
+  }
+  
+  xray: AWS X-Ray {
+    icon: https://icons.terrastruct.com/aws/Developer%20Tools/AWS-X-Ray.svg
+    style.fill: "#FF9900"
+  }
+  
+  rum: CloudWatch RUM {
+    icon: https://icons.terrastruct.com/aws/Management%20Governance/AWS-CloudFormation.svg
+    style.fill: "#FF9900"
+  }
+  
+  sns: Amazon SNS {
+    icon: https://icons.terrastruct.com/aws/Mobile/Amazon-Simple-Notification-Service-SNS.svg
+    style.fill: "#FF9900"
+  }
+}
+
+# Multi-Tenant Management
+tenancy: Multi-Tenant Management {
+  style.fill: "#F1F8E9"
+  style.stroke: "#689F38"
+  style.stroke-width: 2
+  
+  sbt: SaaS Builder Toolkit {
+    icon: https://icons.terrastruct.com/aws/Developer%20Tools/AWS-Cloud-Development-Kit.svg
+    style.fill: "#FF9900"
+  }
+  
+  iam: AWS IAM {
+    icon: https://icons.terrastruct.com/aws/Security%20Identity%20Compliance/AWS-Identity-and-Access-Management-IAM.svg
+    style.fill: "#FF9900"
+  }
+  
+  organizations: AWS Organizations {
+    icon: https://icons.terrastruct.com/aws/Management%20Governance/AWS-Organizations.svg
+    style.fill: "#FF9900"
+  }
+}
+
+# External Systems
+external: External Systems {
+  style.fill: "#FAFAFA"
+  style.stroke: "#757575"
+  style.stroke-width: 2
+  
+  github: GitHub {
+    icon: https://icons.terrastruct.com/dev/github.svg
+    style.fill: "#181717"
+  }
+  
+  terraform: Terraform {
+    icon: https://icons.terrastruct.com/dev/terraform.svg
+    style.fill: "#623CE4"
+  }
+  
+  cloudformation: CloudFormation {
+    icon: https://icons.terrastruct.com/aws/Management%20Governance/AWS-CloudFormation.svg
+    style.fill: "#FF9900"
+  }
+}
+
+# User Flow Connections
+frontend.react -> api_layer.waf: HTTPS {
+  style.stroke: "#2196F3"
+  style.stroke-width: 3
+}
+
+api_layer.waf -> api_layer.appsync: Filtered Requests {
+  style.stroke: "#4CAF50"
+  style.stroke-width: 2
+}
+
+api_layer.appsync -> api_layer.cognito: Authentication {
+  style.stroke: "#FF5722"
+  style.stroke-width: 2
+}
+
+api_layer.appsync -> compute.lambda: GraphQL Resolvers {
+  style.stroke: "#9C27B0"
+  style.stroke-width: 3
+}
+
+# Compute Flow
+compute.lambda -> compute.stepfunctions: Workflow Orchestration {
+  style.stroke: "#3F51B5"
+  style.stroke-width: 2
+}
+
+compute.stepfunctions -> compute.framework_engine: Analysis Execution {
+  style.stroke: "#E91E63"
+  style.stroke-width: 2
+}
+
+compute.framework_engine -> ai_layer.bedrock: AI Analysis {
+  style.stroke: "#FF6B6B"
+  style.stroke-width: 3
+}
+
+# Data Flow
+compute.lambda -> storage.dynamodb: CRUD Operations {
+  style.stroke: "#4CAF50"
+  style.stroke-width: 3
+}
+
+compute.lambda -> storage.s3: File Operations {
+  style.stroke: "#2196F3"
+  style.stroke-width: 2
+}
+
+storage.s3 -> storage.s3_glacier: Archival {
+  style.stroke: "#607D8B"
+  style.stroke-width: 1
+  style.stroke-dash: 5
+}
+
+# Monitoring Flow
+compute.lambda -> monitoring.cloudwatch: Metrics & Logs {
+  style.stroke: "#FF9800"
+  style.stroke-width: 2
+}
+
+compute.lambda -> monitoring.xray: Distributed Tracing {
+  style.stroke: "#9E9E9E"
+  style.stroke-width: 1
+}
+
+frontend.react -> monitoring.rum: Real User Monitoring {
+  style.stroke: "#E91E63"
+  style.stroke-width: 1
+}
+
+monitoring.cloudwatch -> monitoring.sns: Alerts {
+  style.stroke: "#F44336"
+  style.stroke-width: 2
+}
+
+# Security & Tenancy
+tenancy.iam -> compute.lambda: Access Control {
+  style.stroke: "#795548"
+  style.stroke-width: 2
+}
+
+tenancy.sbt -> storage.dynamodb: Tenant Isolation {
+  style.stroke: "#009688"
+  style.stroke-width: 2
+}
+
+# External Integrations
+external.github -> compute.lambda: IaC Repository Access {
+  style.stroke: "#424242"
+  style.stroke-width: 1
+  style.stroke-dash: 3
+}
+
+external.terraform -> compute.framework_engine: Template Analysis {
+  style.stroke: "#673AB7"
+  style.stroke-width: 2
+}
+
+external.cloudformation -> compute.framework_engine: Template Analysis {
+  style.stroke: "#FF9900"
+  style.stroke-width: 2
+}
+
+# Data Processing Pipeline
+pipeline: Data Processing Pipeline {
+  near: bottom-center
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.stroke-width: 2
+  
+  ingestion: Data Ingestion {
+    icon: https://icons.terrastruct.com/aws/Analytics/Amazon-Kinesis-Data-Firehose.svg
+    style.fill: "#FF9900"
+  }
+  
+  processing: Stream Processing {
+    icon: https://icons.terrastruct.com/aws/Analytics/Amazon-Kinesis-Data-Analytics.svg
+    style.fill: "#FF9900"
+  }
+  
+  analytics: Analytics Engine {
+    icon: https://icons.terrastruct.com/aws/Analytics/Amazon-Kinesis-Data-Streams.svg
+    style.fill: "#FF9900"
+  }
+}
+
+# Pipeline connections
+storage.dynamodb -> pipeline.ingestion: Change Streams {
+  style.stroke: "#4CAF50"
+  style.stroke-width: 2
+}
+
+pipeline.ingestion -> pipeline.processing: Real-time Data {
+  style.stroke: "#2196F3"
+  style.stroke-width: 2
+}
+
+pipeline.processing -> pipeline.analytics: Processed Events {
+  style.stroke: "#9C27B0"
+  style.stroke-width: 2
+}
+
+pipeline.analytics -> monitoring.cloudwatch: Business Metrics {
+  style.stroke: "#FF9800"
+  style.stroke-width: 2
+}
+
+# Legend
+legend: Legend {
+  near: bottom-right
+  style.fill: "#FFFFFF"
+  style.stroke: "#000000"
+  style.stroke-width: 1
+  
+  user_flow: User Flow {
+    style.fill: "#2196F3"
+  }
+  
+  data_flow: Data Flow {
+    style.fill: "#4CAF50"
+  }
+  
+  monitoring_flow: Monitoring Flow {
+    style.fill: "#FF9800"
+  }
+  
+  security_flow: Security Flow {
+    style.fill: "#795548"
+  }
+}

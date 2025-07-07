@@ -1,0 +1,369 @@
+title: CloudBestPracticeAnalyzer - System Architecture {
+  near: top-center
+  style.font-size: 24
+  style.bold: true
+}
+
+# Frontend Layer
+frontend: Frontend Layer {
+  style.fill: "#E8F4FD"
+  style.stroke: "#1976D2"
+  style.stroke-width: 2
+  
+  react: React Frontend {
+    style.fill: "#61DAFB"
+    style.stroke: "#1976D2"
+  }
+  
+  cloudscape: Cloudscape Design {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  amplify: AWS Amplify {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+}
+
+# API Gateway & Auth Layer
+api_layer: API Gateway & Authentication {
+  style.fill: "#FFF3E0"
+  style.stroke: "#F57C00"
+  style.stroke-width: 2
+  
+  appsync: AWS AppSync\nGraphQL API {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  cognito: Amazon Cognito\nUser Management {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  waf: AWS WAF\nWeb Protection {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+}
+
+# Compute Layer
+compute: Compute Layer {
+  style.fill: "#F3E5F5"
+  style.stroke: "#7B1FA2"
+  style.stroke-width: 2
+  
+  lambda: AWS Lambda\nNode.js 22.x {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  step_functions: Step Functions\nWorkflow Engine {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  framework_engine: Framework Engine\nMulti-Analysis {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+}
+
+# Storage Layer
+storage: Storage Layer {
+  style.fill: "#E8F5E8"
+  style.stroke: "#388E3C"
+  style.stroke-width: 2
+  
+  dynamodb: Amazon DynamoDB\nMulti-Tenant Tables {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  s3: Amazon S3\nFile Storage {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  s3_glacier: S3 Glacier\nLong-term Archive {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+}
+
+# AI/ML Layer
+ai_layer: AI/ML Layer {
+  style.fill: "#FCE4EC"
+  style.stroke: "#C2185B"
+  style.stroke-width: 2
+  
+  bedrock: Amazon Bedrock\nFoundation Models {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  claude: Claude 4 Sonnet\nAnalysis Engine {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+}
+
+# Monitoring & Security
+monitoring: Monitoring & Security {
+  style.fill: "#FFF8E1"
+  style.stroke: "#F9A825"
+  style.stroke-width: 2
+  
+  cloudwatch: CloudWatch\nMetrics & Logs {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  xray: AWS X-Ray\nDistributed Tracing {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  rum: CloudWatch RUM\nReal User Monitoring {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  sns: Amazon SNS\nNotifications {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+}
+
+# Multi-Tenant Management
+tenancy: Multi-Tenant Management {
+  style.fill: "#F1F8E9"
+  style.stroke: "#689F38"
+  style.stroke-width: 2
+  
+  sbt: SaaS Builder Toolkit\nBasic Tier {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  iam: AWS IAM\nAccess Control {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  organizations: AWS Organizations\nAccount Management {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+}
+
+# External Systems
+external: External Systems {
+  style.fill: "#FAFAFA"
+  style.stroke: "#757575"
+  style.stroke-width: 2
+  
+  github: GitHub\nRepository Integration {
+    style.fill: "#181717"
+    style.stroke: "#424242"
+  }
+  
+  terraform: Terraform\nIaC Templates {
+    style.fill: "#623CE4"
+    style.stroke: "#311B92"
+  }
+  
+  cloudformation: CloudFormation\nAWS Templates {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+}
+
+# Data Processing Pipeline
+pipeline: Data Processing Pipeline {
+  style.fill: "#E3F2FD"
+  style.stroke: "#1565C0"
+  style.stroke-width: 2
+  
+  ingestion: Data Ingestion\nDynamoDB Streams {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  processing: Stream Processing\nReal-time Analytics {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+  
+  analytics: Analytics Engine\nBusiness Metrics {
+    style.fill: "#FF9900"
+    style.stroke: "#E65100"
+  }
+}
+
+# User Flow Connections
+frontend.react -> api_layer.waf: HTTPS\nWeb Traffic {
+  style.stroke: "#2196F3"
+  style.stroke-width: 3
+}
+
+api_layer.waf -> api_layer.appsync: Filtered\nRequests {
+  style.stroke: "#4CAF50"
+  style.stroke-width: 2
+}
+
+api_layer.appsync -> api_layer.cognito: User\nAuthentication {
+  style.stroke: "#FF5722"
+  style.stroke-width: 2
+}
+
+api_layer.appsync -> compute.lambda: GraphQL\nResolvers {
+  style.stroke: "#9C27B0"
+  style.stroke-width: 3
+}
+
+# Compute Flow
+compute.lambda -> compute.step_functions: Workflow\nOrchestration {
+  style.stroke: "#3F51B5"
+  style.stroke-width: 2
+}
+
+compute.step_functions -> compute.framework_engine: Analysis\nExecution {
+  style.stroke: "#E91E63"
+  style.stroke-width: 2
+}
+
+compute.framework_engine -> ai_layer.bedrock: AI-Powered\nAnalysis {
+  style.stroke: "#FF6B6B"
+  style.stroke-width: 3
+}
+
+ai_layer.bedrock -> ai_layer.claude: Model\nInvocation {
+  style.stroke: "#E91E63"
+  style.stroke-width: 2
+}
+
+# Data Flow
+compute.lambda -> storage.dynamodb: CRUD\nOperations {
+  style.stroke: "#4CAF50"
+  style.stroke-width: 3
+}
+
+compute.lambda -> storage.s3: File\nOperations {
+  style.stroke: "#2196F3"
+  style.stroke-width: 2
+}
+
+storage.s3 -> storage.s3_glacier: Lifecycle\nArchival {
+  style.stroke: "#607D8B"
+  style.stroke-width: 1
+  style.stroke-dash: 5
+}
+
+# Monitoring Flow
+compute.lambda -> monitoring.cloudwatch: Metrics\n& Logs {
+  style.stroke: "#FF9800"
+  style.stroke-width: 2
+}
+
+compute.lambda -> monitoring.xray: Distributed\nTracing {
+  style.stroke: "#9E9E9E"
+  style.stroke-width: 1
+}
+
+frontend.react -> monitoring.rum: Real User\nMonitoring {
+  style.stroke: "#E91E63"
+  style.stroke-width: 1
+}
+
+monitoring.cloudwatch -> monitoring.sns: Alert\nNotifications {
+  style.stroke: "#F44336"
+  style.stroke-width: 2
+}
+
+# Security & Tenancy
+tenancy.iam -> compute.lambda: Access\nControl {
+  style.stroke: "#795548"
+  style.stroke-width: 2
+}
+
+tenancy.sbt -> storage.dynamodb: Tenant\nIsolation {
+  style.stroke: "#009688"
+  style.stroke-width: 2
+}
+
+tenancy.organizations -> tenancy.iam: Policy\nManagement {
+  style.stroke: "#4CAF50"
+  style.stroke-width: 1
+}
+
+# External Integrations
+external.github -> compute.lambda: Repository\nAccess {
+  style.stroke: "#424242"
+  style.stroke-width: 1
+  style.stroke-dash: 3
+}
+
+external.terraform -> compute.framework_engine: Template\nAnalysis {
+  style.stroke: "#673AB7"
+  style.stroke-width: 2
+}
+
+external.cloudformation -> compute.framework_engine: Template\nAnalysis {
+  style.stroke: "#FF9900"
+  style.stroke-width: 2
+}
+
+# Pipeline connections
+storage.dynamodb -> pipeline.ingestion: Change\nStreams {
+  style.stroke: "#4CAF50"
+  style.stroke-width: 2
+}
+
+pipeline.ingestion -> pipeline.processing: Real-time\nData {
+  style.stroke: "#2196F3"
+  style.stroke-width: 2
+}
+
+pipeline.processing -> pipeline.analytics: Processed\nEvents {
+  style.stroke: "#9C27B0"
+  style.stroke-width: 2
+}
+
+pipeline.analytics -> monitoring.cloudwatch: Business\nMetrics {
+  style.stroke: "#FF9800"
+  style.stroke-width: 2
+}
+
+# Legend
+legend: Legend {
+  near: bottom-right
+  style.fill: "#FFFFFF"
+  style.stroke: "#000000"
+  style.stroke-width: 1
+  
+  user_flow: User Flow {
+    style.fill: "#2196F3"
+  }
+  
+  data_flow: Data Flow {
+    style.fill: "#4CAF50"
+  }
+  
+  monitoring_flow: Monitoring Flow {
+    style.fill: "#FF9800"
+  }
+  
+  security_flow: Security Flow {
+    style.fill: "#795548"
+  }
+  
+  ai_flow: AI/ML Flow {
+    style.fill: "#E91E63"
+  }
+  
+  external_flow: External Integration {
+    style.fill: "#424242"
+  }
+}
