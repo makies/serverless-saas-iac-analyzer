@@ -118,7 +118,8 @@ export class StepFunctionsStack extends Construct {
   ): stepfunctions.StateMachine {
     // Initialize Analysis Task
     const initializeAnalysis = new sfnTasks.LambdaInvoke(this, 'InitializeAnalysis', {
-      lambdaFunction: resolverFunctions.startAnalysis || resolverFunctions.createAnalysis,
+      lambdaFunction: resolverFunctions[LAMBDA_FUNCTION_NAMES.CREATE_ANALYSIS] || resolverFunctions[LAMBDA_FUNCTION_NAMES.START_ANALYSIS],
+      payload: stepfunctions.TaskInput.fromJsonPathAt('$'),
       outputPath: '$.Payload',
       retryOnServiceExceptions: true,
     });
@@ -151,9 +152,9 @@ export class StepFunctionsStack extends Construct {
         'analysisId.$': '$.analysisId',
         'tenantId.$': '$.tenantId',
         'projectId.$': '$.projectId',
-        'frameworks.$': '$.frameworks',
-        'resourcesS3Key.$': '$.resourcesS3Key',
-        'resources.$': '$.resources',
+        'frameworks.$': '$.configuration.frameworks',
+        'resourcesS3Key.$': '$.input.resourcesS3Key',
+        'resources.$': '$.input.resources',
         'settings': {
           'parallelExecution': true,
           'timeout': 900000, // 15 minutes
@@ -163,6 +164,14 @@ export class StepFunctionsStack extends Construct {
       outputPath: '$.Payload',
       retryOnServiceExceptions: true,
       timeout: cdk.Duration.minutes(15),
+      retry: [
+        {
+          errorEquals: ['Lambda.ServiceException', 'Lambda.AWSLambdaException'],
+          intervalSeconds: 5,
+          maxAttempts: 3,
+          backoffRate: 2.0,
+        },
+      ],
     });
 
     // Conditional Framework Initialization
@@ -187,18 +196,29 @@ export class StepFunctionsStack extends Construct {
         'frameworks.$': '$.result.frameworks',
         'aggregatedSummary.$': '$.result.aggregatedSummary',
         'completedAt.$': '$$.State.EnteredTime',
+        'execution': {
+          'executionArn.$': '$$.Execution.Name',
+          'stateMachineArn.$': '$$.StateMachine.Name',
+        },
       },
       resultPath: '$.aggregated',
     });
 
     // Store Results Task
-    const storeResults = new stepfunctions.Pass(this, 'StoreResults', {
-      comment: 'Store analysis results to DynamoDB',
-      result: stepfunctions.Result.fromObject({
-        status: 'COMPLETED',
-        storedAt: stepfunctions.JsonPath.stringAt('$$.State.EnteredTime'),
-      }),
-      resultPath: '$.storage',
+    const storeResults = new sfnTasks.LambdaInvoke(this, 'StoreResults', {
+      lambdaFunction: resolverFunctions[LAMBDA_FUNCTION_NAMES.STORE_RESULTS],
+      payload: stepfunctions.TaskInput.fromJsonPathAt('$.aggregated'),
+      outputPath: '$.Payload',
+      retryOnServiceExceptions: true,
+      timeout: cdk.Duration.minutes(5),
+      retry: [
+        {
+          errorEquals: ['Lambda.ServiceException', 'Lambda.AWSLambdaException'],
+          intervalSeconds: 2,
+          maxAttempts: 3,
+          backoffRate: 2.0,
+        },
+      ],
     });
 
     // Success State
@@ -250,6 +270,11 @@ export class StepFunctionsStack extends Construct {
     });
 
     runFrameworkAnalysis.addCatch(handleError, {
+      errors: ['States.ALL'],
+      resultPath: '$.error',
+    });
+
+    storeResults.addCatch(handleError, {
       errors: ['States.ALL'],
       resultPath: '$.error',
     });

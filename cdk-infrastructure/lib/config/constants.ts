@@ -203,6 +203,7 @@ export const LAMBDA_FUNCTION_NAMES = {
   // Framework Engine Functions
   FRAMEWORK_INITIALIZATION: 'frameworkInitialization',
   FRAMEWORK_ANALYSIS: 'frameworkAnalysis',
+  STORE_RESULTS: 'storeResults',
 } as const;
 
 // CloudWatch メトリクス

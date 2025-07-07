@@ -13,6 +13,7 @@ import {
   TenantFrameworkConfig,
   FrameworkSettings 
 } from './types';
+import { RuleTemplates } from './rule-templates';
 
 export class FrameworkRegistry {
   private readonly dynamodb: DynamoDBDocumentClient;
@@ -265,13 +266,23 @@ export class FrameworkRegistry {
       for (const framework of defaultFrameworks) {
         await this.saveFramework(framework);
         
+        // Get rules for each framework from templates
+        const rules = this.getFrameworkRulesFromTemplates(framework.id);
+        
         // Save rules for each framework
-        for (const rule of framework.rules) {
+        for (const rule of rules) {
           await this.saveRule(framework.id, rule);
         }
+
+        this.logger.info('Framework initialized', { 
+          frameworkId: framework.id, 
+          rulesCount: rules.length 
+        });
       }
 
-      this.logger.info('Default frameworks initialized successfully');
+      this.logger.info('Default frameworks initialized successfully', {
+        frameworksCount: defaultFrameworks.length
+      });
     } catch (error) {
       this.logger.error('Failed to initialize default frameworks', { error });
       throw new Error('Failed to initialize default frameworks');
@@ -378,6 +389,23 @@ export class FrameworkRegistry {
         updatedAt: now,
       },
     ];
+  }
+
+  private getFrameworkRulesFromTemplates(frameworkId: string): Rule[] {
+    switch (frameworkId) {
+      case 'aws-well-architected-framework':
+        return RuleTemplates.getWellArchitectedRules();
+      
+      case 'aws-security-hub-cspm':
+        return RuleTemplates.getSecurityHubRules();
+      
+      case 'aws-service-delivery-practices':
+        return RuleTemplates.getServiceDeliveryRules();
+      
+      default:
+        this.logger.warn('No rules template found for framework', { frameworkId });
+        return [];
+    }
   }
 
   private mapItemToFramework(item: any): Framework {

@@ -529,6 +529,19 @@ export class AppSyncStack extends Construct {
         memorySize: 2048, // High memory for processing large datasets
       }
     );
+
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.STORE_RESULTS] = new nodejs.NodejsFunction(
+      this,
+      'StoreResultsFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/functions/store-results/handler.ts'),
+        handler: 'handler',
+        functionName: `${config.appSyncConfig.name}-storeResults-${config.environment}`,
+        timeout: cdk.Duration.minutes(5), // Adequate timeout for database operations
+        memorySize: 1024, // Standard memory for data storage operations
+      }
+    );
   }
 
   private createSubscriptionResolvers(_config: EnvironmentConfig, _commonProps: nodejs.NodejsFunctionProps) {

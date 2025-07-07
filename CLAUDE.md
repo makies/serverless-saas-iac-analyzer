@@ -8,7 +8,7 @@
 - Minimum Startアプローチでコスト効率的な運用
 
 ## 技術スタック
-- Frontend: React + AWS Amplify + Cloudscape Design System
+- Frontend: React + AWS Amplify + Ant Design 5.0
 - Backend: AWS Lambda (Node.js 22.x TypeScript) ← 最新ランタイム使用
 - Infrastructure: AWS CDK (TypeScript) + eslint-cdk-plugin
 - AI Engine: Amazon Bedrock (Claude 4 Sonnet)
