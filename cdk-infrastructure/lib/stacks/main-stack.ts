@@ -32,7 +32,15 @@ export class MainStack extends cdk.Stack {
       description: 'S3 buckets and storage infrastructure',
     });
 
-    // AppSync GraphQL API スタック (一時的に Step Functions なしで作成)
+    // モニタリングスタック (先にベースリソースを作成)
+    const monitoringStack = new MonitoringStack(this, 'Monitoring', {
+      config,
+      appSyncApi: null, // 後で設定
+      lambdaFunctions: {}, // 後で追加
+      description: 'Monitoring, logging, and alerting infrastructure',
+    });
+
+    // AppSync GraphQL API スタック
     const appSyncStack = new AppSyncStack(this, 'AppSync', {
       config,
       userPool: authStack.userPool,
@@ -56,13 +64,9 @@ export class MainStack extends cdk.Stack {
       func.addEnvironment('REPORT_GENERATION_STATE_MACHINE_ARN', stepFunctionsStack.reportGenerationStateMachine.stateMachineArn);
     });
 
-    // モニタリングスタック (CloudWatch, X-Ray)
-    const monitoringStack = new MonitoringStack(this, 'Monitoring', {
-      config,
-      appSyncApi: appSyncStack.api,
-      lambdaFunctions: appSyncStack.resolverFunctions,
-      description: 'Monitoring, logging, and alerting infrastructure',
-    });
+    // モニタリングスタックにAppSyncとLambda関数を後から追加
+    monitoringStack.addAppSyncApi(appSyncStack.api);
+    monitoringStack.addLambdaFunctions(appSyncStack.resolverFunctions);
 
     // Dependencies are handled automatically by CDK construct references
 

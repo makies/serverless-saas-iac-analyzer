@@ -86,7 +86,7 @@ const baseConfig: Omit<EnvironmentConfig, 'environment' | 'account' | 'region'> 
   },
 
   lambdaConfig: {
-    runtime: 'nodejs20.x',
+    runtime: 'nodejs22.x',
     timeout: 30,
     memorySize: 512,
     logLevel: 'INFO',

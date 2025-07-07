@@ -34,7 +34,7 @@ export class HybridMainStack extends cdk.Stack {
     const amplifyAppId = this.getAmplifyParameter('app-id');
     const amplifyApiId = this.getAmplifyParameter('api-id');
     const userPoolId = this.getAmplifyParameter('user-pool-id');
-    const identityPoolId = this.getAmplifyParameter('identity-pool-id');
+    const _identityPoolId = this.getAmplifyParameter('identity-pool-id');
 
     // SBT + Amplify Integration Stack
     this.sbtIntegrationStack = new SBTAmplifyIntegrationStack(this, 'SBTIntegration', {
@@ -83,7 +83,7 @@ export class HybridMainStack extends cdk.Stack {
         this,
         `/cloudbpa/${this.stackName.toLowerCase()}/amplify/${paramName}`
       );
-    } catch (error) {
+    } catch (_error) {
       // Return placeholder if parameter doesn't exist yet
       return `AMPLIFY_${paramName.toUpperCase().replace('-', '_')}_PLACEHOLDER`;
     }

@@ -381,18 +381,18 @@ export class StepFunctionsStack extends Construct {
     });
 
     // Failure State (will be used when error handling is implemented)
-    const _reportGenerationFailed = new stepfunctions.Fail(this, 'ReportGenerationFailed', {
-      comment: 'Report generation failed',
-      causePath: '$.errorMessage',
-      errorPath: '$.errorType',
-    });
+    // const _reportGenerationFailed = new stepfunctions.Fail(this, 'ReportGenerationFailed', {
+    //   comment: 'Report generation failed',
+    //   causePath: '$.errorMessage',
+    //   errorPath: '$.errorType',
+    // });
 
     // Connect format branches to metadata storage
     generatePdfReport.next(storeReportMetadata);
     generateExcelReport.next(storeReportMetadata);
     generateJsonReport.next(storeReportMetadata);
     generateHtmlReport.next(storeReportMetadata);
-    
+
     // Connect metadata storage to success
     storeReportMetadata.next(reportGenerationSucceeded);
 
@@ -417,3 +417,4 @@ export class StepFunctionsStack extends Construct {
     });
   }
 }
+

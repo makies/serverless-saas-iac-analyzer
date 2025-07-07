@@ -219,6 +219,9 @@ export class AppSyncStack extends Construct {
     // Resolvers
     this.attachResolvers();
 
+    // Setup log retention for Lambda functions
+    this.setupLogRetention(config);
+
     // Tags
     cdk.Tags.of(this.api).add('Environment', config.environment);
     cdk.Tags.of(this.api).add('Project', 'CloudBestPracticeAnalyzer');
@@ -682,5 +685,41 @@ export class AppSyncStack extends Construct {
       fieldName: 'getAnalysisFindings',
       dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.GET_ANALYSIS_FINDINGS}DataSource`],
     });
+  }
+
+  private setupLogRetention(config: EnvironmentConfig) {
+    // Set log retention for all Lambda functions
+    Object.entries(this.resolverFunctions).forEach(([name, func]) => {
+      new logs.LogGroup(this, `${name}LogGroup`, {
+        logGroupName: `/aws/lambda/${func.functionName}`,
+        retention: this.getLogRetention(config.monitoringConfig.logRetentionDays),
+        removalPolicy:
+          config.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      });
+    });
+  }
+
+  private getLogRetention(days: number): logs.RetentionDays {
+    const retentionMap: Record<number, logs.RetentionDays> = {
+      1: logs.RetentionDays.ONE_DAY,
+      3: logs.RetentionDays.THREE_DAYS,
+      5: logs.RetentionDays.FIVE_DAYS,
+      7: logs.RetentionDays.ONE_WEEK,
+      14: logs.RetentionDays.TWO_WEEKS,
+      30: logs.RetentionDays.ONE_MONTH,
+      60: logs.RetentionDays.TWO_MONTHS,
+      90: logs.RetentionDays.THREE_MONTHS,
+      120: logs.RetentionDays.FOUR_MONTHS,
+      150: logs.RetentionDays.FIVE_MONTHS,
+      180: logs.RetentionDays.SIX_MONTHS,
+      365: logs.RetentionDays.ONE_YEAR,
+      400: logs.RetentionDays.THIRTEEN_MONTHS,
+      545: logs.RetentionDays.EIGHTEEN_MONTHS,
+      731: logs.RetentionDays.TWO_YEARS,
+      1827: logs.RetentionDays.FIVE_YEARS,
+      3653: logs.RetentionDays.TEN_YEARS,
+    };
+
+    return retentionMap[days] || logs.RetentionDays.ONE_MONTH;
   }
 }

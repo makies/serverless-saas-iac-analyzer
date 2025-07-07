@@ -11,7 +11,7 @@ const environment = app.node.tryGetContext('environment') || 'dev';
 const config = getEnvironmentConfig(environment);
 
 // Data Stack for testing
-const _dataTestStack = new DataTestStack(app, 'DataTestStack', {
+new DataTestStack(app, 'DataTestStack', {
   config,
   description: 'DynamoDB tables test for multi-framework system',
 });

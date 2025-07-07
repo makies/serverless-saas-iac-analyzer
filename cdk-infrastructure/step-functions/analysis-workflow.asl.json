@@ -1,0 +1,119 @@
+{
+  "Comment": "Multi-framework IaC Analysis Workflow",
+  "StartAt": "ValidateInput",
+  "States": {
+    "ValidateInput": {
+      "Type": "Pass",
+      "Parameters": {
+        "analysisId.$": "$.analysisId",
+        "tenantId.$": "$.tenantId",
+        "projectId.$": "$.projectId",
+        "inputFiles.$": "$.inputFiles",
+        "frameworks.$": "$.frameworks"
+      },
+      "Next": "InitializeAnalysis"
+    },
+    "InitializeAnalysis": {
+      "Type": "Pass",
+      "Parameters": {
+        "analysisId.$": "$.analysisId",
+        "tenantId.$": "$.tenantId",
+        "projectId.$": "$.projectId",
+        "inputFiles.$": "$.inputFiles",
+        "frameworks.$": "$.frameworks",
+        "timestamp.$": "$$.State.EnteredTime",
+        "requiresInitialization": true
+      },
+      "Next": "CheckFrameworkInitialization",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError"
+        }
+      ]
+    },
+    "CheckFrameworkInitialization": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.requiresInitialization",
+          "BooleanEquals": true,
+          "Next": "InitializeFrameworks"
+        }
+      ],
+      "Default": "RunFrameworkAnalysis"
+    },
+    "InitializeFrameworks": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${FrameworkInitializationFunction}",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.initResult",
+      "TimeoutSeconds": 300,
+      "Next": "RunFrameworkAnalysis",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError"
+        }
+      ]
+    },
+    "RunFrameworkAnalysis": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${FrameworkAnalysisFunction}",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.analysisResult",
+      "TimeoutSeconds": 1800,
+      "Next": "ExtractResults",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "HandleError"
+        }
+      ]
+    },
+    "ExtractResults": {
+      "Type": "Pass",
+      "Parameters": {
+        "analysisId.$": "$.analysisId",
+        "status": "COMPLETED",
+        "overallScore.$": "$.analysisResult.Payload.overallScore",
+        "totalFindings.$": "$.analysisResult.Payload.totalFindings",
+        "frameworks.$": "$.analysisResult.Payload.frameworks",
+        "aggregatedSummary.$": "$.analysisResult.Payload.aggregatedSummary"
+      },
+      "Next": "StoreResults"
+    },
+    "StoreResults": {
+      "Type": "Pass",
+      "Parameters": {
+        "analysisId.$": "$.analysisId",
+        "status.$": "$.status",
+        "results.$": "$"
+      },
+      "Next": "AnalysisSucceeded"
+    },
+    "AnalysisSucceeded": {
+      "Type": "Succeed"
+    },
+    "HandleError": {
+      "Type": "Pass",
+      "Parameters": {
+        "analysisId.$": "$.analysisId",
+        "status": "FAILED",
+        "error.$": "$.Error",
+        "cause.$": "$.Cause"
+      },
+      "Next": "AnalysisFailed"
+    },
+    "AnalysisFailed": {
+      "Type": "Fail",
+      "Cause": "Analysis workflow failed"
+    }
+  }
+}

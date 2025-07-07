@@ -23,11 +23,20 @@ export class MonitoringStack extends Construct {
   public readonly dashboard: cloudwatch.Dashboard;
   public readonly alarmTopic: sns.Topic;
   public readonly rumAppMonitor: rum.CfnAppMonitor;
+  private config: EnvironmentConfig;
+  private appSyncApi: appsync.GraphqlApi | null = null;
+  private lambdaFunctions: Record<string, lambda.Function> = {};
+  private createdLogGroups: Set<string> = new Set();
+  private createdAlarms: Set<string> = new Set();
+  private appSyncAlarmsCreated: boolean = false;
 
   constructor(scope: Construct, id: string, props: MonitoringStackProps) {
     super(scope, id);
 
     const { config, appSyncApi, lambdaFunctions } = props;
+    this.config = config;
+    this.appSyncApi = appSyncApi;
+    this.lambdaFunctions = lambdaFunctions;
 
     // SNS Topic for alarms
     this.alarmTopic = new sns.Topic(this, 'AlarmTopic', {
@@ -51,11 +60,18 @@ export class MonitoringStack extends Construct {
       periodOverride: cloudwatch.PeriodOverride.AUTO,
     });
 
-    // AppSync Metrics
-    this.createAppSyncMetrics(appSyncApi, config);
+    // Initialize basic monitoring components
+    this.initializeBasicMonitoring();
 
-    // Lambda Metrics
-    this.createLambdaMetrics(lambdaFunctions, config);
+    // AppSync and Lambda metrics will be added later via addAppSyncApi and addLambdaFunctions
+    if (appSyncApi) {
+      this.createAppSyncMetrics(appSyncApi, config);
+    }
+
+    if (Object.keys(lambdaFunctions).length > 0) {
+      this.createLambdaMetrics(lambdaFunctions, config);
+      // Note: Log retention is now handled in AppSyncStack to avoid circular dependencies
+    }
 
     // Custom Application Metrics
     this.createApplicationMetrics(config);
@@ -63,21 +79,36 @@ export class MonitoringStack extends Construct {
     // RUM Metrics
     this.createRumMetrics(config);
 
-    // Alarms
-    if (appSyncApi) {
-      this.createAlarms(appSyncApi, lambdaFunctions, config);
-    }
-
-    // Log Groups with retention
-    this.setupLogRetention(lambdaFunctions, config);
-
     // Tags
     cdk.Tags.of(this.dashboard).add('Environment', config.environment);
     cdk.Tags.of(this.dashboard).add('Project', 'CloudBestPracticeAnalyzer');
     cdk.Tags.of(this.dashboard).add('Service', 'Monitoring');
   }
 
-  private createAppSyncMetrics(api: appsync.GraphqlApi | null, config: EnvironmentConfig) {
+  public addAppSyncApi(api: appsync.GraphqlApi) {
+    this.appSyncApi = api;
+    this.createAppSyncMetrics(api, this.config);
+    if (Object.keys(this.lambdaFunctions).length > 0 && !this.appSyncAlarmsCreated) {
+      this.createAlarms(api, this.lambdaFunctions, this.config);
+      this.appSyncAlarmsCreated = true;
+    }
+  }
+
+  public addLambdaFunctions(functions: Record<string, lambda.Function>) {
+    this.lambdaFunctions = { ...this.lambdaFunctions, ...functions };
+    this.createLambdaMetrics(functions, this.config);
+    // Note: Log retention is now handled in AppSyncStack to avoid circular dependencies
+    if (this.appSyncApi && !this.appSyncAlarmsCreated) {
+      this.createAlarms(this.appSyncApi, this.lambdaFunctions, this.config);
+      this.appSyncAlarmsCreated = true;
+    }
+  }
+
+  private initializeBasicMonitoring() {
+    // Basic monitoring setup that doesn't depend on AppSync or Lambda
+  }
+
+  private createAppSyncMetrics(api: appsync.GraphqlApi | null, _config: EnvironmentConfig) {
     if (!api) {
       // Skip AppSync metrics if API is not provided (e.g., in hybrid mode)
       return;
@@ -132,7 +163,7 @@ export class MonitoringStack extends Construct {
 
   private createLambdaMetrics(
     functions: Record<string, lambda.Function>,
-    config: EnvironmentConfig
+    _config: EnvironmentConfig
   ) {
     const lambdaMetrics = Object.entries(functions).map(([name, func]) => {
       return {
@@ -202,7 +233,7 @@ export class MonitoringStack extends Construct {
     }
   }
 
-  private createApplicationMetrics(config: EnvironmentConfig) {
+  private createApplicationMetrics(_config: EnvironmentConfig) {
     // Custom application metrics
     const analysisCount = new cloudwatch.Metric({
       namespace: CLOUDWATCH_METRICS.NAMESPACE,
@@ -287,30 +318,41 @@ export class MonitoringStack extends Construct {
     functions: Record<string, lambda.Function>,
     config: EnvironmentConfig
   ) {
-    // AppSync Error Rate Alarm
-    const appSyncErrorAlarm = new cloudwatch.Alarm(this, 'AppSyncErrorAlarm', {
-      alarmName: `CloudBPA-AppSync-ErrorRate-${config.environment}`,
-      alarmDescription: 'AppSync API error rate is too high',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/AppSync',
-        metricName: '5XXError',
-        dimensionsMap: {
-          GraphQLAPIId: api.apiId,
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5),
-      }),
-      threshold: config.environment === 'prod' ? 10 : 20,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-    });
+    // AppSync Error Rate Alarm (create only once)
+    const appSyncAlarmId = 'AppSyncErrorAlarm';
+    if (!this.createdAlarms.has(appSyncAlarmId)) {
+      const appSyncErrorAlarm = new cloudwatch.Alarm(this, appSyncAlarmId, {
+        alarmName: `CloudBPA-AppSync-ErrorRate-${config.environment}`,
+        alarmDescription: 'AppSync API error rate is too high',
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/AppSync',
+          metricName: '5XXError',
+          dimensionsMap: {
+            GraphQLAPIId: api.apiId,
+          },
+          statistic: 'Sum',
+          period: cdk.Duration.minutes(5),
+        }),
+        threshold: config.environment === 'prod' ? 10 : 20,
+        evaluationPeriods: 2,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
 
-    appSyncErrorAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
+      appSyncErrorAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
+      this.createdAlarms.add(appSyncAlarmId);
+    }
 
     // Lambda Error Rate Alarms
     Object.entries(functions).forEach(([name, func]) => {
-      const errorAlarm = new cloudwatch.Alarm(this, `${name}ErrorAlarm`, {
+      const errorAlarmId = `${name}ErrorAlarm`;
+      
+      // Skip if this alarm has already been created
+      if (this.createdAlarms.has(errorAlarmId)) {
+        return;
+      }
+
+      const errorAlarm = new cloudwatch.Alarm(this, errorAlarmId, {
         alarmName: `CloudBPA-${name}-ErrorRate-${config.environment}`,
         alarmDescription: `${name} Lambda function error rate is too high`,
         metric: func.metricErrors({
@@ -323,10 +365,18 @@ export class MonitoringStack extends Construct {
       });
 
       errorAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
+      this.createdAlarms.add(errorAlarmId);
 
       // Duration Alarm for critical functions
       if (name.includes('Analysis') || name.includes('Report')) {
-        const durationAlarm = new cloudwatch.Alarm(this, `${name}DurationAlarm`, {
+        const durationAlarmId = `${name}DurationAlarm`;
+        
+        // Skip if this duration alarm has already been created
+        if (this.createdAlarms.has(durationAlarmId)) {
+          return;
+        }
+
+        const durationAlarm = new cloudwatch.Alarm(this, durationAlarmId, {
           alarmName: `CloudBPA-${name}-Duration-${config.environment}`,
           alarmDescription: `${name} Lambda function duration is too high`,
           metric: func.metricDuration({
@@ -339,6 +389,7 @@ export class MonitoringStack extends Construct {
         });
 
         durationAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
+        this.createdAlarms.add(durationAlarmId);
       }
     });
 
@@ -361,17 +412,7 @@ export class MonitoringStack extends Construct {
     quotaAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
   }
 
-  private setupLogRetention(functions: Record<string, lambda.Function>, config: EnvironmentConfig) {
-    // Set log retention for all Lambda functions
-    Object.entries(functions).forEach(([name, func]) => {
-      new logs.LogGroup(this, `${name}LogGroup`, {
-        logGroupName: `/aws/lambda/${func.functionName}`,
-        retention: this.getLogRetention(config.monitoringConfig.logRetentionDays),
-        removalPolicy:
-          config.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
-      });
-    });
-  }
+  // Note: Log retention setup moved to AppSyncStack to avoid circular dependencies
 
   private getLogRetention(days: number): logs.RetentionDays {
     const retentionMap: Record<number, logs.RetentionDays> = {

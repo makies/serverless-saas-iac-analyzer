@@ -1,0 +1,113 @@
+{
+  "Comment": "Report Generation Workflow",
+  "StartAt": "InitializeReportGeneration",
+  "States": {
+    "InitializeReportGeneration": {
+      "Type": "Pass",
+      "Parameters": {
+        "reportId.$": "$.reportId",
+        "analysisId.$": "$.analysisId",
+        "tenantId.$": "$.tenantId",
+        "format.$": "$.format",
+        "timestamp.$": "$$.State.EnteredTime"
+      },
+      "Next": "FetchAnalysisData"
+    },
+    "FetchAnalysisData": {
+      "Type": "Pass",
+      "Parameters": {
+        "reportId.$": "$.reportId",
+        "analysisId.$": "$.analysisId",
+        "tenantId.$": "$.tenantId",
+        "format.$": "$.format",
+        "analysisData": "placeholder"
+      },
+      "Next": "ChooseReportFormat"
+    },
+    "ChooseReportFormat": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.format",
+          "StringEquals": "PDF",
+          "Next": "GeneratePdfReport"
+        },
+        {
+          "Variable": "$.format",
+          "StringEquals": "EXCEL",
+          "Next": "GenerateExcelReport"
+        },
+        {
+          "Variable": "$.format",
+          "StringEquals": "JSON",
+          "Next": "GenerateJsonReport"
+        },
+        {
+          "Variable": "$.format",
+          "StringEquals": "HTML",
+          "Next": "GenerateHtmlReport"
+        }
+      ],
+      "Default": "UnsupportedFormat"
+    },
+    "GeneratePdfReport": {
+      "Type": "Pass",
+      "Parameters": {
+        "reportId.$": "$.reportId",
+        "format": "PDF",
+        "status": "GENERATED",
+        "s3Location": "s3://reports-bucket/pdf/report.pdf"
+      },
+      "Next": "StoreReportMetadata"
+    },
+    "GenerateExcelReport": {
+      "Type": "Pass",
+      "Parameters": {
+        "reportId.$": "$.reportId",
+        "format": "EXCEL",
+        "status": "GENERATED",
+        "s3Location": "s3://reports-bucket/excel/report.xlsx"
+      },
+      "Next": "StoreReportMetadata"
+    },
+    "GenerateJsonReport": {
+      "Type": "Pass",
+      "Parameters": {
+        "reportId.$": "$.reportId",
+        "format": "JSON",
+        "status": "GENERATED",
+        "s3Location": "s3://reports-bucket/json/report.json"
+      },
+      "Next": "StoreReportMetadata"
+    },
+    "GenerateHtmlReport": {
+      "Type": "Pass",
+      "Parameters": {
+        "reportId.$": "$.reportId",
+        "format": "HTML",
+        "status": "GENERATED",
+        "s3Location": "s3://reports-bucket/html/report.html"
+      },
+      "Next": "StoreReportMetadata"
+    },
+    "StoreReportMetadata": {
+      "Type": "Pass",
+      "Parameters": {
+        "reportId.$": "$.reportId",
+        "status.$": "$.status",
+        "format.$": "$.format",
+        "s3Location.$": "$.s3Location",
+        "completedAt.$": "$$.State.EnteredTime"
+      },
+      "Next": "ReportGenerationSucceeded"
+    },
+    "ReportGenerationSucceeded": {
+      "Type": "Succeed"
+    },
+    "UnsupportedFormat": {
+      "Type": "Fail",
+      "Cause": "Unsupported report format",
+      "Error": "UnsupportedFormatError"
+    }
+  }
+}
