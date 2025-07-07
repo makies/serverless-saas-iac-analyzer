@@ -1,6 +1,6 @@
 /**
  * List Frameworks Query Resolver
- * Returns available frameworks based on status filter
+ * Retrieves available frameworks with filtering and pagination
  */
 
 import { AppSyncResolverHandler } from 'aws-lambda';
@@ -11,8 +11,6 @@ import { Tracer } from '@aws-lambda-powertools/tracer';
 import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import middy from '@middy/core';
-import { FRAMEWORK_STATUS } from '../../../../lib/config/constants';
-import { FrameworkRegistryItem } from '../../../../lib/config/multi-framework-types';
 
 // Initialize PowerTools
 const logger = new Logger({ serviceName: 'FrameworkService' });
@@ -23,86 +21,129 @@ const ddbClient = new DynamoDBClient({});
 const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
 
 interface ListFrameworksArgs {
+  type?: string;
   status?: string;
-  frameworkType?: string;
   limit?: number;
   nextToken?: string;
 }
 
-interface ListFrameworksResult {
-  items: FrameworkRegistryItem[];
+interface Framework {
+  frameworkId: string;
+  type: string;
+  name: string;
+  description: string;
+  version: string;
+  status: string;
+  categories: string[];
+  metadata: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface FrameworkConnection {
+  items: Framework[];
   nextToken?: string;
 }
 
-const listFrameworks: AppSyncResolverHandler<ListFrameworksArgs, ListFrameworksResult> = async (
-  event
-) => {
+const listFrameworks: AppSyncResolverHandler<ListFrameworksArgs, FrameworkConnection> = async (event) => {
   const { arguments: args, identity } = event;
-  const { status = FRAMEWORK_STATUS.ACTIVE, frameworkType, limit = 20, nextToken } = args;
+  const { type, status, limit = 50, nextToken } = args;
+
+  const userTenantId = (identity as any)?.claims?.['custom:tenantId'];
+  const userRole = (identity as any)?.claims?.['custom:role'];
+  const userId = (identity as any)?.sub;
 
   logger.info('ListFrameworks query started', {
-    userId: (identity as any)?.sub,
-    arguments: args,
+    userId,
+    userTenantId,
+    userRole,
+    filters: { type, status },
+    limit,
   });
 
   try {
-    let queryParams: any;
+    // Build the query
+    let keyConditionExpression = 'pk = :pk';
+    const expressionAttributeValues: any = {
+      ':pk': 'FRAMEWORK',
+    };
+
+    // Add filter expression for optional filters
+    let filterExpression = '';
+    const filterConditions: string[] = [];
+
+    if (type) {
+      filterConditions.push('#type = :type');
+      expressionAttributeValues[':type'] = type;
+    }
 
     if (status) {
-      // Query by status using GSI
-      queryParams = {
-        TableName: process.env.FRAMEWORK_REGISTRY_TABLE!,
-        IndexName: 'ByStatus',
-        KeyConditionExpression: 'GSI1PK = :statusPK',
-        ExpressionAttributeValues: {
-          ':statusPK': `STATUS#${status}`,
-        },
-        Limit: limit,
-        ScanIndexForward: true,
-      };
+      filterConditions.push('#status = :status');
+      expressionAttributeValues[':status'] = status;
+    }
 
-      // Add framework type filter if specified
-      if (frameworkType) {
-        queryParams.FilterExpression = 'frameworkType = :frameworkType';
-        queryParams.ExpressionAttributeValues[':frameworkType'] = frameworkType;
-      }
-    } else {
-      // Scan all frameworks
-      queryParams = {
-        TableName: process.env.FRAMEWORK_REGISTRY_TABLE!,
-        FilterExpression: frameworkType ? 'frameworkType = :frameworkType' : undefined,
-        ExpressionAttributeValues: frameworkType ? { ':frameworkType': frameworkType } : undefined,
-        Limit: limit,
+    if (filterConditions.length > 0) {
+      filterExpression = filterConditions.join(' AND ');
+    }
+
+    const queryParams: any = {
+      TableName: process.env.FRAMEWORK_REGISTRY_TABLE!,
+      KeyConditionExpression: keyConditionExpression,
+      ExpressionAttributeValues: expressionAttributeValues,
+      Limit: Math.min(limit, 100), // Cap at 100 items per page
+      ScanIndexForward: false, // Most recent frameworks first
+    };
+
+    if (filterExpression) {
+      queryParams.FilterExpression = filterExpression;
+      queryParams.ExpressionAttributeNames = {
+        '#type': 'type',
+        '#status': 'status',
       };
     }
 
-    // Add pagination
     if (nextToken) {
-      queryParams.ExclusiveStartKey = JSON.parse(Buffer.from(nextToken, 'base64').toString());
+      try {
+        queryParams.ExclusiveStartKey = JSON.parse(Buffer.from(nextToken, 'base64').toString());
+      } catch (error) {
+        throw new Error('Invalid pagination token');
+      }
     }
 
-    const command = new QueryCommand(queryParams);
-    const result = await ddbDocClient.send(command);
+    const result = await ddbDocClient.send(new QueryCommand(queryParams));
 
-    const items = (result.Items || []) as FrameworkRegistryItem[];
+    const frameworks: Framework[] = (result.Items || []).map(item => ({
+      frameworkId: item.frameworkId,
+      type: item.type,
+      name: item.name,
+      description: item.description,
+      version: item.version,
+      status: item.status,
+      categories: item.categories || [],
+      metadata: item.metadata || {},
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    }));
 
-    // Create next token if there are more items
-    const responseNextToken = result.LastEvaluatedKey
-      ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
-      : undefined;
+    const response: FrameworkConnection = {
+      items: frameworks,
+    };
+
+    if (result.LastEvaluatedKey) {
+      response.nextToken = Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64');
+    }
 
     logger.info('ListFrameworks query completed', {
-      itemCount: items.length,
-      hasNextToken: !!responseNextToken,
+      frameworksCount: frameworks.length,
+      hasMore: !!response.nextToken,
+      filters: { type, status },
     });
 
-    return {
-      items,
-      nextToken: responseNextToken,
-    };
-  } catch (error) {
+    return response;
+  } catch (error: any) {
     logger.error('Error listing frameworks', {
       error: error instanceof Error ? error.message : String(error),
+      filters: { type, status },
     });
     throw new Error('Failed to list frameworks');
   }

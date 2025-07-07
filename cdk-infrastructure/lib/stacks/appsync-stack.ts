@@ -23,6 +23,8 @@ export interface AppSyncStackProps {
   identityPool: cognito.CfnIdentityPool;
   tables: Record<string, dynamodb.Table>;
   buckets: Record<string, s3.Bucket>;
+  analysisStateMachineArn?: string;
+  reportGenerationStateMachineArn?: string;
   description?: string;
 }
 
@@ -34,7 +36,7 @@ export class AppSyncStack extends Construct {
   constructor(scope: Construct, id: string, props: AppSyncStackProps) {
     super(scope, id);
 
-    const { config, userPool, tables, buckets } = props;
+    const { config, userPool, tables, buckets, analysisStateMachineArn, reportGenerationStateMachineArn } = props;
 
     this.resolverFunctions = {};
     this.dataSources = {};
@@ -127,6 +129,32 @@ export class AppSyncStack extends Construct {
             }),
           ],
         }),
+        StepFunctionsAccess: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: ['states:StartExecution', 'states:DescribeExecution', 'states:StopExecution'],
+              resources: [
+                analysisStateMachineArn || `arn:aws:states:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:stateMachine:AnalysisWorkflow-${config.environment}`,
+                reportGenerationStateMachineArn || `arn:aws:states:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:stateMachine:ReportGenerationWorkflow-${config.environment}`,
+              ],
+            }),
+          ],
+        }),
+        STSAccess: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: ['sts:AssumeRole'],
+              resources: ['*'],
+              conditions: {
+                StringLike: {
+                  'sts:RoleSessionName': 'CloudBPA-Analysis-*',
+                },
+              },
+            }),
+          ],
+        }),
       },
     });
 
@@ -172,6 +200,9 @@ export class AppSyncStack extends Construct {
         // Bedrock Configuration
         BEDROCK_MODEL_ID: config.bedrockConfig.modelId,
         BEDROCK_REGION: config.bedrockConfig.region,
+        // Step Functions Configuration
+        ANALYSIS_STATE_MACHINE_ARN: analysisStateMachineArn || '',
+        REPORT_GENERATION_STATE_MACHINE_ARN: reportGenerationStateMachineArn || '',
       },
       tracing: config.monitoringConfig.enableXRay ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED,
     };
@@ -296,6 +327,30 @@ export class AppSyncStack extends Construct {
       }
     );
 
+    // User Profile queries
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.GET_USER_PROFILE] = new nodejs.NodejsFunction(
+      this,
+      'GetUserProfileFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/query/getUserProfile.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-getUserProfile-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
+
+    // Analysis Findings queries
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.GET_ANALYSIS_FINDINGS] = new nodejs.NodejsFunction(
+      this,
+      'GetAnalysisFindingsFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/query/getAnalysisFindings.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-getAnalysisFindings-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
+
     this.resolverFunctions[LAMBDA_FUNCTION_NAMES.LIST_FRAMEWORK_RULES] = new nodejs.NodejsFunction(
       this,
       'ListFrameworkRulesFunction',
@@ -387,6 +442,42 @@ export class AppSyncStack extends Construct {
         entry: path.join(__dirname, '../../src/resolvers/mutation/framework/createFrameworkSet.ts'),
         handler: 'handler',
         functionName: `${commonProps.environment.SERVICE_NAME}-createFrameworkSet-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
+
+    // Enhanced analysis mutations
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.CREATE_ANALYSIS_WITH_LIVE_SCAN] = new nodejs.NodejsFunction(
+      this,
+      'CreateAnalysisWithLiveScanFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/mutation/createAnalysisWithLiveScan.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-createAnalysisWithLiveScan-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
+
+    // Enhanced report generation
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.GENERATE_REPORT_ENHANCED] = new nodejs.NodejsFunction(
+      this,
+      'GenerateReportEnhancedFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/mutation/generateReportEnhanced.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-generateReportEnhanced-${commonProps.environment.ENVIRONMENT}`,
+      }
+    );
+
+    // User Profile mutations
+    this.resolverFunctions[LAMBDA_FUNCTION_NAMES.UPDATE_USER_PROFILE] = new nodejs.NodejsFunction(
+      this,
+      'UpdateUserProfileFunction',
+      {
+        ...commonProps,
+        entry: path.join(__dirname, '../../src/resolvers/mutation/updateUserProfile.ts'),
+        handler: 'handler',
+        functionName: `${commonProps.environment.SERVICE_NAME}-updateUserProfile-${commonProps.environment.ENVIRONMENT}`,
       }
     );
 
@@ -546,6 +637,26 @@ export class AppSyncStack extends Construct {
       typeName: 'Mutation',
       fieldName: 'deleteFrameworkSet',
       dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.DELETE_FRAMEWORK_SET}DataSource`],
+    });
+
+    // User Profile resolvers
+    this.api.createResolver('GetUserProfileResolver', {
+      typeName: 'Query',
+      fieldName: 'getUserProfile',
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.GET_USER_PROFILE}DataSource`],
+    });
+
+    this.api.createResolver('UpdateUserProfileResolver', {
+      typeName: 'Mutation',
+      fieldName: 'updateUserProfile',
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.UPDATE_USER_PROFILE}DataSource`],
+    });
+
+    // Analysis Findings resolver
+    this.api.createResolver('GetAnalysisFindingsResolver', {
+      typeName: 'Query',
+      fieldName: 'getAnalysisFindings',
+      dataSource: this.dataSources[`${LAMBDA_FUNCTION_NAMES.GET_ANALYSIS_FINDINGS}DataSource`],
     });
   }
 }

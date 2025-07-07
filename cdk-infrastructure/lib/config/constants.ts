@@ -162,6 +162,12 @@ export const LAMBDA_FUNCTION_NAMES = {
   LIST_FRAMEWORK_RULES: 'listFrameworkRules',
   GET_TENANT_FRAMEWORK_CONFIG: 'getTenantFrameworkConfig',
 
+  // User Profile Queries
+  GET_USER_PROFILE: 'getUserProfile',
+
+  // Analysis Findings Queries
+  GET_ANALYSIS_FINDINGS: 'getAnalysisFindings',
+
   // Mutation Resolvers
   CREATE_PROJECT: 'createProject',
   UPDATE_PROJECT: 'updateProject',
@@ -175,6 +181,15 @@ export const LAMBDA_FUNCTION_NAMES = {
   CREATE_FRAMEWORK_SET: 'createFrameworkSet',
   UPDATE_FRAMEWORK_SET: 'updateFrameworkSet',
   DELETE_FRAMEWORK_SET: 'deleteFrameworkSet',
+
+  // Enhanced Analysis Mutations
+  CREATE_ANALYSIS_WITH_LIVE_SCAN: 'createAnalysisWithLiveScan',
+
+  // Enhanced Report Generation
+  GENERATE_REPORT_ENHANCED: 'generateReportEnhanced',
+
+  // User Profile Mutations
+  UPDATE_USER_PROFILE: 'updateUserProfile',
 
   // Subscription Resolvers
   ON_ANALYSIS_STATUS_CHANGED: 'onAnalysisStatusChanged',

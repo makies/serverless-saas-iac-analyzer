@@ -4,6 +4,6 @@
     "types": ["node", "jest"],
     "allowJs": true
   },
-  "include": ["**/__tests__/**/*.ts", "**/*.test.ts", "**/*.spec.ts"],
+  "include": ["**/__tests__/**/*.ts", "**/*.test.ts", "**/*.spec.ts", "test/**/*.ts"],
   "exclude": ["node_modules", "dist", "cdk.out"]
 }

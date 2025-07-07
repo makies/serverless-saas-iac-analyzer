@@ -1,7 +1,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/src', '<rootDir>/lib'],
+  roots: ['<rootDir>/src', '<rootDir>/lib', '<rootDir>/test'],
   testMatch: [
     '**/__tests__/**/*.ts',
     '**/?(*.)+(spec|test).ts',
@@ -16,6 +16,7 @@ module.exports = {
     'lib/**/*.ts',
     '!src/**/*.d.ts',
     '!lib/**/*.d.ts',
+    '!test/**/*.ts',
     '!**/__tests__/**',
     '!**/node_modules/**',
   ],
@@ -27,6 +28,7 @@ module.exports = {
     '^@lib/(.*)$': '<rootDir>/lib/$1',
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',
     '^@resolvers/(.*)$': '<rootDir>/src/resolvers/$1',
+    '^@test/(.*)$': '<rootDir>/test/$1',
   },
   testTimeout: 30000,
   verbose: true,

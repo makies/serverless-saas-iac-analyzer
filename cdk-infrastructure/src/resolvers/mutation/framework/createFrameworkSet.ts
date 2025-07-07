@@ -1,23 +1,17 @@
 /**
  * Create Framework Set Mutation Resolver
- * Creates a new framework configuration set for a tenant
+ * Creates a tenant-specific framework configuration set
  */
 
 import { AppSyncResolverHandler } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import {
-  DynamoDBDocumentClient,
-  PutCommand,
-  UpdateCommand,
-  TransactWriteCommand,
-} from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import middy from '@middy/core';
 import { v4 as uuidv4 } from 'uuid';
-import { TenantFrameworkConfigItem } from '../../../../lib/config/multi-framework-types';
 
 // Initialize PowerTools
 const logger = new Logger({ serviceName: 'FrameworkService' });
@@ -29,106 +23,197 @@ const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
 
 interface CreateFrameworkSetArgs {
   tenantId: string;
-  setName: string;
+  frameworkId: string;
+  name: string;
   description?: string;
-  frameworks: {
-    frameworkId: string;
-    version?: string;
-    pillars?: string[];
-    weight: number;
-    enabled: boolean;
-    customConfig?: {
-      severityWeights?: Record<string, number>;
-      excludedRules?: string[];
-      customThresholds?: Record<string, number>;
-    };
-  }[];
-  isDefault?: boolean;
+  isDefault: boolean;
+  enabledRules: string[];
+  customRules?: CustomRule[];
+  ruleOverrides?: any;
+  settings?: FrameworkSettings;
 }
 
-const createFrameworkSet: AppSyncResolverHandler<
-  CreateFrameworkSetArgs,
-  TenantFrameworkConfigItem
-> = async (event) => {
-  const { arguments: args, identity } = event;
-  const { tenantId, setName, description, frameworks, isDefault = false } = args;
+interface CustomRule {
+  id?: string;
+  name: string;
+  description: string;
+  severity: string;
+  category: string;
+  implementation: {
+    checkType: string;
+    conditions: any;
+    parameters?: any;
+    remediation: string;
+  };
+}
 
-  // Verify tenant access (basic tenant isolation)
+interface FrameworkSettings {
+  strictMode?: boolean;
+  includeInformational?: boolean;
+  customSeverityLevels?: any;
+  notificationSettings?: any;
+}
+
+interface TenantFrameworkConfig {
+  tenantId: string;
+  frameworkId: string;
+  name: string;
+  description?: string;
+  isDefault: boolean;
+  enabledRules: string[];
+  customRules: CustomRule[];
+  ruleOverrides?: any;
+  settings?: FrameworkSettings;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const createFrameworkSet: AppSyncResolverHandler<CreateFrameworkSetArgs, TenantFrameworkConfig> = async (event) => {
+  const { arguments: args, identity } = event;
+  const {
+    tenantId,
+    frameworkId,
+    name,
+    description,
+    isDefault,
+    enabledRules,
+    customRules = [],
+    ruleOverrides,
+    settings,
+  } = args;
+
   const userTenantId = (identity as any)?.claims?.['custom:tenantId'];
-  if (userTenantId && userTenantId !== tenantId) {
-    throw new Error('Access denied: Cannot modify other tenant data');
+  const userRole = (identity as any)?.claims?.['custom:role'];
+  const userId = (identity as any)?.sub;
+
+  // Tenant isolation check
+  if (userRole !== 'SystemAdmin' && userTenantId !== tenantId) {
+    logger.warn('Access denied to different tenant', {
+      requestedTenantId: tenantId,
+      userTenantId,
+    });
+    throw new Error('Access denied: Cannot create framework set for different tenant');
+  }
+
+  // Role authorization check
+  if (!['SystemAdmin', 'FrameworkAdmin', 'ClientAdmin'].includes(userRole)) {
+    throw new Error('Access denied: Insufficient permissions to create framework set');
   }
 
   logger.info('CreateFrameworkSet mutation started', {
-    userId: (identity as any)?.sub,
+    userId,
     tenantId,
-    setName,
-    frameworkCount: frameworks.length,
+    frameworkId,
+    name,
     isDefault,
+    enabledRulesCount: enabledRules.length,
+    customRulesCount: customRules.length,
   });
 
   try {
-    const now = new Date().toISOString();
-    const configId = uuidv4();
-
-    const frameworkSetItem: TenantFrameworkConfigItem = {
-      pk: `TENANT#${tenantId}`,
-      sk: `FRAMEWORK_SET#${setName}`,
-      configId,
-      tenantId,
-      setName,
-      description: description || '',
-      frameworks,
-      isDefault,
-      createdAt: now,
-      updatedAt: now,
-      createdBy: (identity as any)?.sub || 'system',
-      GSI1PK: isDefault ? `TENANT#${tenantId}#DEFAULT` : `TENANT#${tenantId}#CUSTOM`,
-      GSI1SK: `#${isDefault ? 'true' : 'false'}`,
-    };
-
-    const transactionItems = [];
-
-    // Add the new framework set
-    transactionItems.push({
-      Put: {
-        TableName: process.env.TENANT_FRAMEWORK_CONFIG_TABLE!,
-        Item: frameworkSetItem,
-        ConditionExpression: 'attribute_not_exists(pk)',
+    // Validate that the framework exists
+    const frameworkQuery = new QueryCommand({
+      TableName: process.env.FRAMEWORK_REGISTRY_TABLE!,
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: {
+        ':pk': `FRAMEWORK#${frameworkId}`,
       },
     });
 
-    // If this is set as default, unset other defaults for this tenant
-    if (isDefault) {
-      // Note: In a real implementation, you would need to query existing defaults first
-      // and add update operations to unset them. This is simplified for now.
-      logger.info('Setting as default framework set', { tenantId, setName });
+    const frameworkResult = await ddbDocClient.send(frameworkQuery);
+    if (!frameworkResult.Items || frameworkResult.Items.length === 0) {
+      throw new Error(`Framework '${frameworkId}' not found`);
     }
 
-    // Execute transaction
-    const transactCommand = new TransactWriteCommand({
-      TransactItems: transactionItems,
+    const framework = frameworkResult.Items[0];
+
+    // If this is being set as default, check if there's already a default framework set
+    if (isDefault) {
+      const existingDefaultQuery = new QueryCommand({
+        TableName: process.env.TENANT_FRAMEWORK_CONFIGS_TABLE!,
+        IndexName: 'TenantDefaultIndex',
+        KeyConditionExpression: 'gsi1pk = :gsi1pk AND gsi1sk = :gsi1sk',
+        ExpressionAttributeValues: {
+          ':gsi1pk': `TENANT#${tenantId}`,
+          ':gsi1sk': 'DEFAULT#TRUE',
+        },
+      });
+
+      const existingDefaultResult = await ddbDocClient.send(existingDefaultQuery);
+      if (existingDefaultResult.Items && existingDefaultResult.Items.length > 0) {
+        logger.warn('Another default framework set exists', {
+          tenantId,
+          existingFrameworkId: existingDefaultResult.Items[0].frameworkId,
+        });
+        // Note: In a real implementation, you might want to update the existing default to false
+      }
+    }
+
+    // Generate IDs for custom rules if not provided
+    const processedCustomRules = customRules.map(rule => ({
+      ...rule,
+      id: rule.id || uuidv4(),
+    }));
+
+    const now = new Date().toISOString();
+
+    const frameworkConfig: TenantFrameworkConfig = {
+      tenantId,
+      frameworkId,
+      name,
+      description,
+      isDefault,
+      enabledRules,
+      customRules: processedCustomRules,
+      ruleOverrides,
+      settings: settings || {
+        strictMode: false,
+        includeInformational: true,
+      },
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Store framework configuration in DynamoDB
+    const putCommand = new PutCommand({
+      TableName: process.env.TENANT_FRAMEWORK_CONFIGS_TABLE!,
+      Item: {
+        pk: `TENANT#${tenantId}`,
+        sk: `FRAMEWORK#${frameworkId}`,
+        gsi1pk: `TENANT#${tenantId}`,
+        gsi1sk: isDefault ? 'DEFAULT#TRUE' : `FRAMEWORK#${frameworkId}#${now}`,
+        gsi2pk: `FRAMEWORK#${frameworkId}`,
+        gsi2sk: `TENANT#${tenantId}#${now}`,
+        ...frameworkConfig,
+      },
+      ConditionExpression: 'attribute_not_exists(pk)',
     });
 
-    await ddbDocClient.send(transactCommand);
+    await ddbDocClient.send(putCommand);
 
     logger.info('CreateFrameworkSet mutation completed', {
       tenantId,
-      setName,
-      configId,
+      frameworkId,
+      name,
+      isDefault,
+      enabledRulesCount: enabledRules.length,
+      customRulesCount: processedCustomRules.length,
     });
 
-    return frameworkSetItem;
+    return frameworkConfig;
   } catch (error: any) {
     if (error.name === 'ConditionalCheckFailedException') {
-      logger.error('Framework set already exists', { tenantId, setName });
-      throw new Error(`Framework set '${setName}' already exists for this tenant`);
+      logger.error('Framework set already exists', {
+        tenantId,
+        frameworkId,
+      });
+      throw new Error('Framework set already exists for this tenant');
     }
 
     logger.error('Error creating framework set', {
       error: error instanceof Error ? error.message : String(error),
       tenantId,
-      setName,
+      frameworkId,
     });
     throw new Error('Failed to create framework set');
   }
