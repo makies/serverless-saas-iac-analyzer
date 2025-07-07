@@ -25,7 +25,7 @@
     "@aws-amplify/datastore": "^5.0.84",
     "@aws-amplify/ui-react": "^6.11.2",
     "@types/react-router-dom": "^5.3.3",
-    "antd": "^5.26.2",
+    "antd": "^5.26.3",
     "aws-amplify": "^6.15.1",
     "dayjs": "^1.11.13",
     "react": "^18.2.0",
