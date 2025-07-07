@@ -16,7 +16,7 @@ import {
   SettingOutlined,
   DashboardOutlined,
   ProjectOutlined,
-  AnalysisOutlined,
+  BarChartOutlined,
   UsergroupAddOutlined,
   ToolOutlined
 } from '@ant-design/icons';
@@ -56,7 +56,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   const iconMap: { [key: string]: React.ReactNode } = {
     'ダッシュボード': <DashboardOutlined />,
     'プロジェクト一覧': <ProjectOutlined />,
-    '新規分析': <AnalysisOutlined />,
+    '新規分析': <BarChartOutlined />,
     'テナント管理': <UsergroupAddOutlined />,
     'フレームワーク管理': <ToolOutlined />
   };
@@ -67,7 +67,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
       return {
         key: item.text,
         label: item.text,
-        type: 'group',
+        type: 'group' as const,
         children: item.items.map(subItem => ({
           key: subItem.href || subItem.text,
           label: subItem.text,

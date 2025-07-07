@@ -8,7 +8,6 @@ import {
   Modal,
   Form,
   Select,
-  Textarea,
   message,
   Card,
   Row,
@@ -28,6 +27,7 @@ import {
   ToolOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
+  BarChartOutlined,
   StopOutlined,
   FileTextOutlined,
   SettingOutlined
@@ -619,7 +619,7 @@ const FrameworkManagement: React.FC = () => {
             label="説明"
             rules={[{ required: true, message: '説明を入力してください' }]}
           >
-            <Textarea
+            <Input.TextArea
               placeholder="フレームワークの説明を入力"
               rows={3}
             />
@@ -666,7 +666,7 @@ const FrameworkManagement: React.FC = () => {
               <div style={{ padding: '8px 0' }}>
                 <p><strong>説明:</strong> {record.description}</p>
                 <p><strong>タグ:</strong> {record.tags.map(tag => (
-                  <Tag key={tag} size="small">{tag}</Tag>
+                  <Tag key={tag}>{tag}</Tag>
                 ))}</p>
               </div>
             ),

@@ -189,7 +189,6 @@ const TenantManagement: React.FC = () => {
       title: 'テナント名',
       dataIndex: 'name',
       key: 'name',
-      filterable: true,
       sorter: (a, b) => a.name.localeCompare(b.name)
     },
     {
