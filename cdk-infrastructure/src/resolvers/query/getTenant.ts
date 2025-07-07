@@ -4,99 +4,67 @@
  */
 
 import { AppSyncResolverHandler } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import middy from '@middy/core';
 
+// Import shared utilities and types
+import { Tenant, GetTenantArgs } from '../../shared/types/tenant';
+import { getAuthContext, canAccessTenant } from '../../shared/utils/auth';
+import { getItem } from '../../shared/utils/dynamodb';
+import { handleError, validateRequired, validateUUID, NotFoundError, AuthorizationError, ValidationError } from '../../shared/utils/errors';
+
 // Initialize PowerTools
 const logger = new Logger({ serviceName: 'TenantService' });
 const tracer = new Tracer({ serviceName: 'TenantService' });
-
-// Initialize DynamoDB
-const ddbClient = new DynamoDBClient({});
-const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
-
-interface GetTenantArgs {
-  tenantId: string;
-}
-
-interface Tenant {
-  tenantId: string;
-  companyName: string;
-  status: string;
-  subscription: {
-    tier: string;
-    maxProjects: number;
-    maxUsers: number;
-    features: string[];
-  };
-  contact: {
-    name: string;
-    email: string;
-    phone?: string;
-  };
-  settings: {
-    defaultTimeZone: string;
-    defaultLanguage: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
 
 const getTenant: AppSyncResolverHandler<GetTenantArgs, Tenant | null> = async (event) => {
   const { arguments: args, identity } = event;
   const { tenantId } = args;
 
-  // Authorization check - users can only access their own tenant data
-  const userTenantId = (identity as any)?.claims?.['custom:tenantId'];
-  const userRole = (identity as any)?.claims?.['custom:role'];
-
-  // SystemAdmin can access any tenant, others can only access their own
-  if (userRole !== 'SystemAdmin' && userTenantId !== tenantId) {
-    throw new Error('Access denied: Cannot access other tenant data');
-  }
-
-  logger.info('GetTenant query started', {
-    userId: (identity as any)?.sub,
-    tenantId,
-    userTenantId,
-    userRole,
-  });
-
   try {
-    const command = new GetCommand({
-      TableName: process.env.TENANTS_TABLE!,
-      Key: {
-        pk: `TENANT#${tenantId}`,
-        sk: '#METADATA',
-      },
-    });
-
-    const result = await ddbDocClient.send(command);
-
-    if (!result.Item) {
-      logger.warn('Tenant not found', { tenantId });
-      return null;
+    // Validate input
+    validateRequired({ tenantId }, ['tenantId']);
+    if (!validateUUID(tenantId)) {
+      throw new ValidationError('Invalid tenant ID format');
     }
 
-    const tenant = result.Item as Tenant;
+    // Get authentication context
+    const authContext = getAuthContext(identity);
+
+    // Authorization check
+    if (!canAccessTenant(authContext, tenantId)) {
+      throw new AuthorizationError('Cannot access other tenant data');
+    }
+
+    logger.info('GetTenant query started', {
+      userId: authContext.userId,
+      tenantId,
+      userTenantId: authContext.tenantId,
+      userRole: authContext.role,
+    });
+
+    // Get tenant from DynamoDB
+    const tenant = await getItem<Tenant>(
+      process.env.TENANTS_TABLE!,
+      { id: tenantId }
+    );
+
+    if (!tenant) {
+      throw new NotFoundError('Tenant', tenantId);
+    }
 
     logger.info('GetTenant query completed', {
       tenantId,
-      companyName: tenant.companyName,
+      tenantName: tenant.name,
+      status: tenant.status,
     });
 
     return tenant;
   } catch (error: any) {
-    logger.error('Error getting tenant', {
-      error: error instanceof Error ? error.message : String(error),
-      tenantId,
-    });
-    throw new Error('Failed to get tenant');
+    handleError(error, logger, { tenantId, operation: 'getTenant' });
   }
 };
 

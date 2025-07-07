@@ -4,41 +4,26 @@
  */
 
 import { AppSyncResolverHandler } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import middy from '@middy/core';
 
+// Import shared utilities and types
+import { Project, ListProjectsByTenantArgs } from '../../shared/types/project';
+import { getAuthContext, canAccessTenant } from '../../shared/utils/auth';
+import { queryItems } from '../../shared/utils/dynamodb';
+import { handleError, validateRequired, validateUUID, AuthorizationError, ValidationError } from '../../shared/utils/errors';
+
 // Initialize PowerTools
 const logger = new Logger({ serviceName: 'ProjectService' });
 const tracer = new Tracer({ serviceName: 'ProjectService' });
 
-// Initialize DynamoDB
-const ddbClient = new DynamoDBClient({});
-const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
-
-interface ListProjectsByTenantArgs {
-  tenantId: string;
-  limit?: number;
-  nextToken?: string;
-}
-
-interface Project {
-  projectId: string;
-  tenantId: string;
-  name: string;
-  description: string;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 interface ListProjectsResponse {
   projects: Project[];
   nextToken?: string;
+  count: number;
 }
 
 const listProjectsByTenant: AppSyncResolverHandler<
@@ -46,65 +31,83 @@ const listProjectsByTenant: AppSyncResolverHandler<
   ListProjectsResponse
 > = async (event) => {
   const { arguments: args, identity } = event;
-  const { tenantId, limit = 20, nextToken } = args;
-
-  const userTenantId = (identity as any)?.claims?.['custom:tenantId'];
-  const userRole = (identity as any)?.claims?.['custom:role'];
-
-  // Tenant isolation check
-  if (userRole !== 'SystemAdmin' && userTenantId !== tenantId) {
-    throw new Error('Access denied: Cannot access projects from different tenant');
-  }
-
-  logger.info('ListProjectsByTenant query started', {
-    userId: (identity as any)?.sub,
-    tenantId,
-    userTenantId,
-    userRole,
-    limit,
-    hasNextToken: !!nextToken,
-  });
+  const { tenantId, status, limit = 25, nextToken } = args;
 
   try {
-    const command = new QueryCommand({
-      TableName: process.env.PROJECTS_TABLE!,
-      IndexName: 'ByTenant',
-      KeyConditionExpression: 'tenantId = :tenantId',
-      ExpressionAttributeValues: {
-        ':tenantId': tenantId,
-      },
-      ScanIndexForward: false, // Sort by createdAt descending
-      Limit: limit,
-      ExclusiveStartKey: nextToken
-        ? JSON.parse(Buffer.from(nextToken, 'base64').toString())
-        : undefined,
+    // Validate input
+    validateRequired({ tenantId }, ['tenantId']);
+    if (!validateUUID(tenantId)) {
+      throw new ValidationError('Invalid tenant ID format');
+    }
+
+    // Get authentication context
+    const authContext = getAuthContext(identity);
+
+    // Authorization check
+    if (!canAccessTenant(authContext, tenantId)) {
+      throw new AuthorizationError('Cannot access projects from different tenant');
+    }
+
+    logger.info('ListProjectsByTenant query started', {
+      userId: authContext.userId,
+      tenantId,
+      userTenantId: authContext.tenantId,
+      userRole: authContext.role,
+      status,
+      limit,
+      hasNextToken: !!nextToken,
     });
 
-    const result = await ddbDocClient.send(command);
+    let result;
 
-    const projects = (result.Items || []) as Project[];
-
-    const response: ListProjectsResponse = {
-      projects,
-      nextToken: result.LastEvaluatedKey
-        ? Buffer.from(JSON.stringify(result.LastEvaluatedKey)).toString('base64')
-        : undefined,
-    };
+    if (status) {
+      // Query by tenant and status using composite GSI
+      result = await queryItems<Project>(
+        process.env.PROJECTS_TABLE!,
+        'tenantId = :tenantId AND #status = :status',
+        {
+          indexName: 'ByTenantAndStatus',
+          expressionAttributeNames: {
+            '#status': 'status',
+          },
+          expressionAttributeValues: {
+            ':tenantId': tenantId,
+            ':status': status,
+          },
+          pagination: { limit, nextToken },
+          scanIndexForward: false, // Get newest first
+        }
+      );
+    } else {
+      // Query by tenant only
+      result = await queryItems<Project>(
+        process.env.PROJECTS_TABLE!,
+        'tenantId = :tenantId',
+        {
+          indexName: 'ByTenant',
+          expressionAttributeValues: {
+            ':tenantId': tenantId,
+          },
+          pagination: { limit, nextToken },
+          scanIndexForward: false, // Get newest first
+        }
+      );
+    }
 
     logger.info('ListProjectsByTenant query completed', {
       tenantId,
-      projectCount: projects.length,
-      hasNextToken: !!response.nextToken,
+      projectCount: result.count,
+      hasNextToken: !!result.nextToken,
+      status,
     });
 
-    return response;
+    return {
+      projects: result.items,
+      nextToken: result.nextToken,
+      count: result.count,
+    };
   } catch (error: any) {
-    logger.error('Error listing projects by tenant', {
-      error: error instanceof Error ? error.message : String(error),
-      tenantId,
-      limit,
-    });
-    throw new Error('Failed to list projects by tenant');
+    handleError(error, logger, { tenantId, status, limit, operation: 'listProjectsByTenant' });
   }
 };
 

@@ -4,89 +4,61 @@
  */
 
 import { AppSyncResolverHandler } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import middy from '@middy/core';
 
+// Import shared utilities and types
+import { Analysis, GetAnalysisArgs } from '../../shared/types/analysis';
+import { getAuthContext, canAccessTenant } from '../../shared/utils/auth';
+import { getItem } from '../../shared/utils/dynamodb';
+import { handleError, validateRequired, validateUUID, NotFoundError, AuthorizationError, ValidationError } from '../../shared/utils/errors';
+
 // Initialize PowerTools
 const logger = new Logger({ serviceName: 'AnalysisService' });
 const tracer = new Tracer({ serviceName: 'AnalysisService' });
-
-// Initialize DynamoDB
-const ddbClient = new DynamoDBClient({});
-const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
-
-interface GetAnalysisArgs {
-  analysisId: string;
-}
-
-interface Analysis {
-  analysisId: string;
-  projectId: string;
-  tenantId: string;
-  name: string;
-  status: string;
-  type: string;
-  configuration: {
-    frameworks: string[];
-    scope: string;
-    settings: Record<string, any>;
-  };
-  results?: {
-    summary: Record<string, any>;
-    findings: any[];
-    recommendations: any[];
-  };
-  createdAt: string;
-  updatedAt: string;
-  completedAt?: string;
-  createdBy: string;
-}
 
 const getAnalysis: AppSyncResolverHandler<GetAnalysisArgs, Analysis | null> = async (event) => {
   const { arguments: args, identity } = event;
   const { analysisId } = args;
 
-  const userTenantId = (identity as any)?.claims?.['custom:tenantId'];
-  const userRole = (identity as any)?.claims?.['custom:role'];
-
-  logger.info('GetAnalysis query started', {
-    userId: (identity as any)?.sub,
-    analysisId,
-    userTenantId,
-    userRole,
-  });
-
   try {
-    const command = new GetCommand({
-      TableName: process.env.ANALYSES_TABLE!,
-      Key: {
-        pk: `ANALYSIS#${analysisId}`,
-        sk: '#METADATA',
-      },
-    });
-
-    const result = await ddbDocClient.send(command);
-
-    if (!result.Item) {
-      logger.warn('Analysis not found', { analysisId });
-      return null;
+    // Validate input
+    validateRequired({ analysisId }, ['analysisId']);
+    if (!validateUUID(analysisId)) {
+      throw new ValidationError('Invalid analysis ID format');
     }
 
-    const analysis = result.Item as Analysis;
+    // Get authentication context
+    const authContext = getAuthContext(identity);
+
+    logger.info('GetAnalysis query started', {
+      userId: authContext.userId,
+      analysisId,
+      userTenantId: authContext.tenantId,
+      userRole: authContext.role,
+    });
+
+    // Get analysis from DynamoDB
+    const analysis = await getItem<Analysis>(
+      process.env.ANALYSES_TABLE!,
+      { id: analysisId }
+    );
+
+    if (!analysis) {
+      throw new NotFoundError('Analysis', analysisId);
+    }
 
     // Tenant isolation check
-    if (userRole !== 'SystemAdmin' && analysis.tenantId !== userTenantId) {
-      logger.warn('Access denied to analysis from different tenant', {
-        analysisId,
-        analysisTenantId: analysis.tenantId,
-        userTenantId,
-      });
-      throw new Error('Access denied: Cannot access analysis from different tenant');
+    if (!canAccessTenant(authContext, analysis.tenantId)) {
+      throw new AuthorizationError('Cannot access analysis from different tenant');
+    }
+
+    // Permission check for analysis read access
+    if (!authContext.permissions.includes('analysis:read') && authContext.role !== 'SystemAdmin') {
+      throw new AuthorizationError('Insufficient permissions to view analysis');
     }
 
     logger.info('GetAnalysis query completed', {
@@ -94,15 +66,13 @@ const getAnalysis: AppSyncResolverHandler<GetAnalysisArgs, Analysis | null> = as
       tenantId: analysis.tenantId,
       projectId: analysis.projectId,
       status: analysis.status,
+      type: analysis.type,
+      frameworkCount: analysis.configuration.frameworks.length,
     });
 
     return analysis;
   } catch (error: any) {
-    logger.error('Error getting analysis', {
-      error: error instanceof Error ? error.message : String(error),
-      analysisId,
-    });
-    throw new Error('Failed to get analysis');
+    handleError(error, logger, { analysisId, operation: 'getAnalysis' });
   }
 };
 

@@ -4,8 +4,6 @@
  */
 
 import { AppSyncResolverHandler } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
@@ -13,93 +11,85 @@ import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import middy from '@middy/core';
 import { v4 as uuidv4 } from 'uuid';
 
+// Import shared utilities and types
+import { Analysis, CreateAnalysisArgs } from '../../shared/types/analysis';
+import { Project } from '../../shared/types/project';
+import { getAuthContext } from '../../shared/utils/auth';
+import { getItem, putItem, generateTimestamps } from '../../shared/utils/dynamodb';
+import { handleError, validateRequired, validateUUID, NotFoundError, AuthorizationError, ValidationError, ConflictError } from '../../shared/utils/errors';
+
 // Initialize PowerTools
 const logger = new Logger({ serviceName: 'AnalysisService' });
 const tracer = new Tracer({ serviceName: 'AnalysisService' });
-
-// Initialize DynamoDB
-const ddbClient = new DynamoDBClient({});
-const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
-
-interface CreateAnalysisArgs {
-  projectId: string;
-  name: string;
-  type: string;
-  configuration: {
-    frameworks: string[];
-    scope: string;
-    settings?: Record<string, any>;
-  };
-}
-
-interface Analysis {
-  analysisId: string;
-  projectId: string;
-  tenantId: string;
-  name: string;
-  status: string;
-  type: string;
-  configuration: {
-    frameworks: string[];
-    scope: string;
-    settings: Record<string, any>;
-  };
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
-}
 
 const createAnalysis: AppSyncResolverHandler<CreateAnalysisArgs, Analysis> = async (event) => {
   const { arguments: args, identity } = event;
   const { projectId, name, type, configuration } = args;
 
-  const userTenantId = (identity as any)?.claims?.['custom:tenantId'];
-  const userRole = (identity as any)?.claims?.['custom:role'];
-  const userId = (identity as any)?.sub;
-
-  const analysisId = uuidv4();
-  const now = new Date().toISOString();
-
-  logger.info('CreateAnalysis mutation started', {
-    userId,
-    projectId,
-    analysisId,
-    analysisName: name,
-    type,
-    userRole,
-  });
-
   try {
-    // First, verify that the project exists and user has access to it
-    const projectCommand = new GetCommand({
-      TableName: process.env.PROJECTS_TABLE!,
-      Key: {
-        pk: `PROJECT#${projectId}`,
-        sk: '#METADATA',
-      },
+    // Validate input
+    validateRequired({ projectId, name, type }, ['projectId', 'name', 'type']);
+    if (!validateUUID(projectId)) {
+      throw new ValidationError('Invalid project ID format');
+    }
+
+    // Get authentication context
+    const authContext = getAuthContext(identity);
+
+    const analysisId = uuidv4();
+    const timestamps = generateTimestamps();
+
+    logger.info('CreateAnalysis mutation started', {
+      userId: authContext.userId,
+      projectId,
+      analysisId,
+      analysisName: name,
+      type,
+      userRole: authContext.role,
     });
 
-    const projectResult = await ddbDocClient.send(projectCommand);
+    // Verify that the project exists and user has access to it
+    const project = await getItem<Project>(
+      process.env.PROJECTS_TABLE!,
+      { id: projectId }
+    );
 
-    if (!projectResult.Item) {
-      logger.warn('Project not found', { projectId });
-      throw new Error('Project not found');
+    if (!project) {
+      throw new NotFoundError('Project', projectId);
     }
-
-    const project = projectResult.Item;
 
     // Tenant isolation check
-    if (userRole !== 'SystemAdmin' && project.tenantId !== userTenantId) {
-      logger.warn('Access denied to project from different tenant', {
-        projectId,
-        projectTenantId: project.tenantId,
-        userTenantId,
-      });
-      throw new Error('Access denied: Cannot create analysis for project from different tenant');
+    if (authContext.role !== 'SystemAdmin' && project.tenantId !== authContext.tenantId) {
+      throw new AuthorizationError('Cannot create analysis for project from different tenant');
     }
 
+    // Permission check for analysis creation
+    if (!authContext.permissions.includes('analysis:create') && authContext.role !== 'SystemAdmin') {
+      throw new AuthorizationError('Insufficient permissions to create analysis');
+    }
+
+    // Validate frameworks exist (basic validation)
+    if (!configuration.frameworks || configuration.frameworks.length === 0) {
+      throw new ValidationError('At least one framework must be specified');
+    }
+
+    // Build default analysis settings if not provided
+    const defaultSettings = {
+      includeInactiveResources: false,
+      maxResourcesPerAnalysis: 10000,
+      parallelAnalysisLimit: 5,
+      detailedReporting: true,
+      generateRecommendations: true,
+      autoRemediationEnabled: false,
+      reportFormat: ['JSON', 'PDF'] as ('PDF' | 'EXCEL' | 'JSON' | 'CSV')[],
+      notificationSettings: {
+        emailOnCompletion: true,
+        emailOnError: true,
+      },
+    };
+
     const analysis: Analysis = {
-      analysisId,
+      id: analysisId,
       projectId,
       tenantId: project.tenantId,
       name,
@@ -108,50 +98,55 @@ const createAnalysis: AppSyncResolverHandler<CreateAnalysisArgs, Analysis> = asy
       configuration: {
         frameworks: configuration.frameworks,
         scope: configuration.scope,
-        settings: configuration.settings || {},
+        settings: { ...defaultSettings, ...configuration.settings },
       },
-      createdAt: now,
-      updatedAt: now,
-      createdBy: userId,
+      metadata: {
+        analysisVersion: '1.0.0',
+        engineVersion: '2.0.0',
+        resourceTypesAnalyzed: [],
+        executionEnvironment: {
+          region: process.env.AWS_REGION || 'us-east-1',
+          accountId: process.env.AWS_ACCOUNT_ID || '',
+          runtime: 'nodejs22.x',
+        },
+        quotaUsage: {
+          analysisCount: 1,
+          monthlyLimit: 100,
+          fileSize: 0,
+          fileSizeLimit: 10 * 1024 * 1024, // 10MB
+        },
+        performance: {
+          totalExecutionTime: 0,
+          frameworkExecutionTimes: {},
+        },
+      },
+      createdAt: timestamps.createdAt,
+      updatedAt: timestamps.updatedAt,
+      createdBy: authContext.userId,
     };
 
-    const command = new PutCommand({
-      TableName: process.env.ANALYSES_TABLE!,
-      Item: {
-        pk: `ANALYSIS#${analysisId}`,
-        sk: '#METADATA',
-        ...analysis,
-        // GSI keys for queries
-        projectId,
-        tenantId: project.tenantId,
-        status: analysis.status,
-      },
-      ConditionExpression: 'attribute_not_exists(pk)',
-    });
-
-    await ddbDocClient.send(command);
+    // Create analysis with condition to prevent duplicates
+    await putItem<Analysis>(
+      process.env.ANALYSES_TABLE!,
+      analysis,
+      'attribute_not_exists(id)'
+    );
 
     logger.info('CreateAnalysis mutation completed', {
       analysisId,
       projectId,
       tenantId: project.tenantId,
       analysisName: name,
-      createdBy: userId,
+      frameworkCount: configuration.frameworks.length,
+      createdBy: authContext.userId,
     });
 
     return analysis;
   } catch (error: any) {
     if (error.name === 'ConditionalCheckFailedException') {
-      logger.error('Analysis already exists', { analysisId, projectId });
-      throw new Error('Analysis already exists');
+      throw new ConflictError('Analysis already exists');
     }
-
-    logger.error('Error creating analysis', {
-      error: error instanceof Error ? error.message : String(error),
-      projectId,
-      analysisName: name,
-    });
-    throw new Error('Failed to create analysis');
+    handleError(error, logger, { projectId, name, type, operation: 'createAnalysis' });
   }
 };
 

@@ -4,22 +4,21 @@
  */
 
 import { AppSyncResolverHandler } from 'aws-lambda';
-import { GetCommand } from '@aws-sdk/lib-dynamodb';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import middy from '@middy/core';
-import { AppSyncIdentity, Project } from '../../shared/types/appsync';
-import { ddbDocClient } from '../../shared/utils/aws-clients';
+
+// Import shared utilities and types
+import { Project, GetProjectArgs } from '../../shared/types/project';
+import { getAuthContext, canAccessTenant } from '../../shared/utils/auth';
+import { getItem } from '../../shared/utils/dynamodb';
+import { handleError, validateRequired, validateUUID, NotFoundError, AuthorizationError, ValidationError } from '../../shared/utils/errors';
 
 // Initialize PowerTools
 const logger = new Logger({ serviceName: 'ProjectService' });
 const tracer = new Tracer({ serviceName: 'ProjectService' });
-
-interface GetProjectArgs {
-  projectId: string;
-}
 
 
 
@@ -27,43 +26,36 @@ const getProject: AppSyncResolverHandler<GetProjectArgs, Project | null> = async
   const { arguments: args, identity } = event;
   const { projectId } = args;
 
-  const appSyncIdentity = identity as AppSyncIdentity;
-  const userTenantId = appSyncIdentity?.claims?.['custom:tenantId'];
-  const userRole = appSyncIdentity?.claims?.['custom:role'];
-
-  logger.info('GetProject query started', {
-    userId: appSyncIdentity?.sub,
-    projectId,
-    userTenantId,
-    userRole,
-  });
-
   try {
-    const command = new GetCommand({
-      TableName: process.env.PROJECTS_TABLE!,
-      Key: {
-        pk: `PROJECT#${projectId}`,
-        sk: '#METADATA',
-      },
-    });
-
-    const result = await ddbDocClient.send(command);
-
-    if (!result.Item) {
-      logger.warn('Project not found', { projectId });
-      return null;
+    // Validate input
+    validateRequired({ projectId }, ['projectId']);
+    if (!validateUUID(projectId)) {
+      throw new ValidationError('Invalid project ID format');
     }
 
-    const project = result.Item as Project;
+    // Get authentication context
+    const authContext = getAuthContext(identity);
+
+    logger.info('GetProject query started', {
+      userId: authContext.userId,
+      projectId,
+      userTenantId: authContext.tenantId,
+      userRole: authContext.role,
+    });
+
+    // Get project from DynamoDB
+    const project = await getItem<Project>(
+      process.env.PROJECTS_TABLE!,
+      { id: projectId }
+    );
+
+    if (!project) {
+      throw new NotFoundError('Project', projectId);
+    }
 
     // Tenant isolation check
-    if (userRole !== 'SystemAdmin' && project.tenantId !== userTenantId) {
-      logger.warn('Access denied to project from different tenant', {
-        projectId,
-        projectTenantId: project.tenantId,
-        userTenantId,
-      });
-      throw new Error('Access denied: Cannot access project from different tenant');
+    if (!canAccessTenant(authContext, project.tenantId)) {
+      throw new AuthorizationError('Cannot access project from different tenant');
     }
 
     logger.info('GetProject query completed', {
@@ -73,12 +65,8 @@ const getProject: AppSyncResolverHandler<GetProjectArgs, Project | null> = async
     });
 
     return project;
-  } catch (error: unknown) {
-    logger.error('Error getting project', {
-      error: error instanceof Error ? error.message : String(error),
-      projectId,
-    });
-    throw new Error('Failed to get project');
+  } catch (error: any) {
+    handleError(error, logger, { projectId, operation: 'getProject' });
   }
 };
 
