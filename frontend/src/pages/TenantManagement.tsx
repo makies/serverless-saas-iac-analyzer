@@ -28,6 +28,8 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { graphqlClient } from '../amplify-config';
 import { useAuth } from '../hooks/useAuth';
+import { tenantQueries } from '../services/graphqlQueries';
+import { useErrorHandler } from '../hooks/useErrorHandler';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -45,6 +47,12 @@ interface Tenant {
 
 const TenantManagement: React.FC = () => {
   const { user } = useAuth();
+  const { executeWithErrorHandling, loading: errorHandlerLoading, showSuccess } = useErrorHandler({
+    showErrorMessages: true,
+    enableRetry: true,
+    retryOptions: { maxRetries: 2, delay: 1000 }
+  });
+  
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -60,50 +68,26 @@ const TenantManagement: React.FC = () => {
   const loadTenants = async () => {
     setLoading(true);
     try {
-      // This would be replaced with actual GraphQL query
-      const mockTenants: Tenant[] = [
-        {
-          id: 'tenant-1',
-          name: 'サンプル企業A',
-          status: 'ACTIVE',
-          tier: 'STANDARD',
-          createdAt: '2024-01-15',
-          projectCount: 5,
-          analysisCount: 23,
-          adminEmail: 'admin@company-a.com'
-        },
-        {
-          id: 'tenant-2',
-          name: 'サンプル企業B',
-          status: 'ACTIVE',
-          tier: 'BASIC',
-          createdAt: '2024-02-01',
-          projectCount: 2,
-          analysisCount: 8,
-          adminEmail: 'admin@company-b.com'
-        },
-        {
-          id: 'tenant-3',
-          name: 'サンプル企業C',
-          status: 'SUSPENDED',
-          tier: 'PREMIUM',
-          createdAt: '2023-12-10',
-          projectCount: 12,
-          analysisCount: 67,
-          adminEmail: 'admin@company-c.com'
-        },
-        {
-          id: 'tenant-4',
-          name: 'サンプル企業D',
-          status: 'PENDING',
-          tier: 'BASIC',
-          createdAt: '2024-02-15',
-          projectCount: 0,
-          analysisCount: 0,
-          adminEmail: 'admin@company-d.com'
-        }
-      ];
-      setTenants(mockTenants);
+      const { data, errors } = await tenantQueries.listTenants();
+      if (errors.length > 0) {
+        console.error('GraphQL errors:', errors);
+        message.error('テナント情報の取得に失敗しました');
+        return;
+      }
+      
+      // Transform the GraphQL data to match our component interface
+      const transformedTenants: Tenant[] = data.map((tenant: any) => ({
+        id: tenant.id,
+        name: tenant.name,
+        status: tenant.status,
+        tier: 'BASIC', // TODO: Add tier field to schema or derive from subscription
+        createdAt: tenant.createdAt,
+        projectCount: 0, // TODO: Calculate from projects relation
+        analysisCount: 0, // TODO: Calculate from analyses relation
+        adminEmail: tenant.adminEmail
+      }));
+      
+      setTenants(transformedTenants);
     } catch (error) {
       console.error('Failed to load tenants:', error);
       message.error('テナント情報の取得に失敗しました');
@@ -133,8 +117,12 @@ const TenantManagement: React.FC = () => {
       cancelText: 'キャンセル',
       onOk: async () => {
         try {
-          // This would be replaced with actual GraphQL mutation
-          console.log('Deleting tenant:', tenant.id);
+          const { errors } = await tenantQueries.deleteTenant(tenant.id);
+          if (errors.length > 0) {
+            console.error('GraphQL errors:', errors);
+            message.error('テナントの削除に失敗しました');
+            return;
+          }
           message.success('テナントを削除しました');
           loadTenants();
         } catch (error) {
@@ -148,14 +136,35 @@ const TenantManagement: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      // This would be replaced with actual GraphQL mutation
+      
       if (editingTenant) {
-        console.log('Updating tenant:', editingTenant.id, values);
+        // Update existing tenant
+        const { errors } = await tenantQueries.updateTenant(editingTenant.id, {
+          name: values.name,
+          adminEmail: values.adminEmail,
+          status: values.status
+        });
+        if (errors.length > 0) {
+          console.error('GraphQL errors:', errors);
+          message.error('テナントの更新に失敗しました');
+          return;
+        }
         message.success('テナントを更新しました');
       } else {
-        console.log('Creating tenant:', values);
+        // Create new tenant
+        const { errors } = await tenantQueries.createTenant({
+          name: values.name,
+          adminEmail: values.adminEmail,
+          status: values.status || 'ACTIVE'
+        });
+        if (errors.length > 0) {
+          console.error('GraphQL errors:', errors);
+          message.error('テナントの作成に失敗しました');
+          return;
+        }
         message.success('テナントを作成しました');
       }
+      
       setIsModalVisible(false);
       loadTenants();
     } catch (error) {
@@ -168,7 +177,7 @@ const TenantManagement: React.FC = () => {
     const statusConfig = {
       'ACTIVE': { color: 'green', text: 'アクティブ' },
       'SUSPENDED': { color: 'red', text: '停止中' },
-      'PENDING': { color: 'orange', text: '承認待ち' }
+      'ARCHIVED': { color: 'default', text: 'アーカイブ済み' }
     };
     const config = statusConfig[status as keyof typeof statusConfig];
     return <Tag color={config.color}>{config.text}</Tag>;
@@ -205,7 +214,7 @@ const TenantManagement: React.FC = () => {
       filters: [
         { text: 'アクティブ', value: 'ACTIVE' },
         { text: '停止中', value: 'SUSPENDED' },
-        { text: '承認待ち', value: 'PENDING' }
+        { text: 'アーカイブ済み', value: 'ARCHIVED' }
       ],
       onFilter: (value, record) => record.status === value
     },
@@ -426,7 +435,7 @@ const TenantManagement: React.FC = () => {
                 <Select placeholder="ステータスを選択">
                   <Select.Option value="ACTIVE">アクティブ</Select.Option>
                   <Select.Option value="SUSPENDED">停止中</Select.Option>
-                  <Select.Option value="PENDING">承認待ち</Select.Option>
+                  <Select.Option value="ARCHIVED">アーカイブ済み</Select.Option>
                 </Select>
               </Form.Item>
             </Col>

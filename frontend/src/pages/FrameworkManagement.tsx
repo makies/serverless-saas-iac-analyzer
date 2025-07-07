@@ -33,12 +33,12 @@ import {
   SettingOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { graphqlClient } from '../amplify-config';
+import type { TabsProps } from 'antd';
 import { useAuth } from '../hooks/useAuth';
+import { frameworkQueries } from '../services/graphqlQueries';
 
 const { Title } = Typography;
 const { Search } = Input;
-const { TabPane } = Tabs;
 
 interface Framework {
   id: string;
@@ -88,62 +88,29 @@ const FrameworkManagement: React.FC = () => {
   const loadFrameworks = async () => {
     setLoading(true);
     try {
-      // This would be replaced with actual GraphQL query
-      const mockFrameworks: Framework[] = [
-        {
-          id: 'framework-1',
-          name: 'AWS Well-Architected Framework',
-          type: 'AWS_WELL_ARCHITECTED',
-          version: '2023.10',
-          status: 'ACTIVE',
-          description: 'AWSの6つの柱に基づく設計原則とベストプラクティス',
-          ruleCount: 156,
-          tenantCount: 12,
-          createdAt: '2023-10-01',
-          updatedAt: '2023-12-15',
-          author: 'AWS'
-        },
-        {
-          id: 'framework-2',
-          name: 'AWS Well-Architected SaaS Lens',
-          type: 'AWS_LENS',
-          version: '2023.04',
-          status: 'ACTIVE',
-          description: 'SaaSアプリケーション向けの設計ガイダンス',
-          ruleCount: 89,
-          tenantCount: 8,
-          createdAt: '2023-04-15',
-          updatedAt: '2023-11-20',
-          author: 'AWS'
-        },
-        {
-          id: 'framework-3',
-          name: 'AWS Security Hub CSPM',
-          type: 'SECURITY_HUB',
-          version: '2024.01',
-          status: 'ACTIVE',
-          description: 'クラウドセキュリティポスチャ管理のための統合検証',
-          ruleCount: 234,
-          tenantCount: 15,
-          createdAt: '2024-01-10',
-          updatedAt: '2024-01-25',
-          author: 'AWS'
-        },
-        {
-          id: 'framework-4',
-          name: 'カスタムセキュリティフレームワーク',
-          type: 'CUSTOM',
-          version: '1.2.0',
-          status: 'DRAFT',
-          description: '企業固有のセキュリティ要件に基づくカスタムルールセット',
-          ruleCount: 45,
-          tenantCount: 3,
-          createdAt: '2024-02-01',
-          updatedAt: '2024-02-15',
-          author: 'Internal Team'
-        }
-      ];
-      setFrameworks(mockFrameworks);
+      const { data, errors } = await frameworkQueries.listFrameworks();
+      if (errors.length > 0) {
+        console.error('GraphQL errors:', errors);
+        message.error('フレームワーク情報の取得に失敗しました');
+        return;
+      }
+
+      // Transform the GraphQL data to match the Framework interface
+      const transformedFrameworks: Framework[] = data.map((framework: any) => ({
+        id: framework.id,
+        name: framework.name,
+        type: framework.type,
+        version: framework.version,
+        status: framework.status,
+        description: framework.description,
+        ruleCount: framework.rules ? Object.keys(framework.rules).length : 0,
+        tenantCount: 0, // TODO: Implement tenant count calculation
+        createdAt: framework.createdAt,
+        updatedAt: framework.updatedAt,
+        author: framework.author
+      }));
+
+      setFrameworks(transformedFrameworks);
     } catch (error) {
       console.error('Failed to load frameworks:', error);
       message.error('フレームワーク情報の取得に失敗しました');
@@ -155,43 +122,27 @@ const FrameworkManagement: React.FC = () => {
   const loadFrameworkRules = async (frameworkId: string) => {
     setRulesLoading(true);
     try {
-      // This would be replaced with actual GraphQL query
-      const mockRules: FrameworkRule[] = [
-        {
-          id: 'rule-1',
-          frameworkId,
-          ruleId: 'OPS01-01',
-          title: '運用手順の文書化',
-          description: 'システムの運用手順を明確に文書化し、チーム全体で共有する',
-          severity: 'HIGH',
-          category: 'Operational Excellence',
-          tags: ['documentation', 'operations'],
-          enabled: true
-        },
-        {
-          id: 'rule-2',
-          frameworkId,
-          ruleId: 'SEC02-01',
-          title: 'IAMロールの最小権限原則',
-          description: 'IAMロールには必要最小限の権限のみを付与する',
-          severity: 'HIGH',
-          category: 'Security',
-          tags: ['iam', 'security', 'permissions'],
-          enabled: true
-        },
-        {
-          id: 'rule-3',
-          frameworkId,
-          ruleId: 'REL03-01',
-          title: 'マルチAZ構成',
-          description: '可用性を向上させるためマルチAZ構成を採用する',
-          severity: 'MEDIUM',
-          category: 'Reliability',
-          tags: ['availability', 'multi-az'],
-          enabled: true
-        }
-      ];
-      setRules(mockRules);
+      const { data, errors } = await frameworkQueries.listFrameworkRules(frameworkId);
+      if (errors.length > 0) {
+        console.error('GraphQL errors:', errors);
+        message.error('ルール情報の取得に失敗しました');
+        return;
+      }
+
+      // Transform the GraphQL data to match the FrameworkRule interface
+      const transformedRules: FrameworkRule[] = data.map((rule: any) => ({
+        id: rule.id,
+        frameworkId: rule.frameworkId,
+        ruleId: rule.ruleId,
+        title: rule.title,
+        description: rule.description,
+        severity: rule.severity,
+        category: rule.category,
+        tags: rule.tags || [],
+        enabled: rule.enabled !== false // Default to true if not specified
+      }));
+
+      setRules(transformedRules);
     } catch (error) {
       console.error('Failed to load framework rules:', error);
       message.error('ルール情報の取得に失敗しました');
@@ -227,8 +178,13 @@ const FrameworkManagement: React.FC = () => {
       cancelText: 'キャンセル',
       onOk: async () => {
         try {
-          // This would be replaced with actual GraphQL mutation
-          console.log('Deleting framework:', framework.id);
+          const { data, errors } = await frameworkQueries.deleteFramework(framework.id);
+          if (errors.length > 0) {
+            console.error('GraphQL errors:', errors);
+            message.error('フレームワークの削除に失敗しました');
+            return;
+          }
+          
           message.success('フレームワークを削除しました');
           loadFrameworks();
         } catch (error) {
@@ -242,14 +198,43 @@ const FrameworkManagement: React.FC = () => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      // This would be replaced with actual GraphQL mutation
+      
       if (editingFramework) {
-        console.log('Updating framework:', editingFramework.id, values);
+        // Update existing framework
+        const { data, errors } = await frameworkQueries.updateFramework(editingFramework.id, {
+          name: values.name,
+          type: values.type,
+          version: values.version,
+          description: values.description,
+          status: values.status || editingFramework.status
+        });
+        
+        if (errors.length > 0) {
+          console.error('GraphQL errors:', errors);
+          message.error('フレームワークの更新に失敗しました');
+          return;
+        }
+        
         message.success('フレームワークを更新しました');
       } else {
-        console.log('Creating framework:', values);
+        // Create new framework
+        const { data, errors } = await frameworkQueries.createFramework({
+          name: values.name,
+          type: values.type,
+          version: values.version,
+          description: values.description,
+          status: values.status || 'DRAFT'
+        });
+        
+        if (errors.length > 0) {
+          console.error('GraphQL errors:', errors);
+          message.error('フレームワークの作成に失敗しました');
+          return;
+        }
+        
         message.success('フレームワークを作成しました');
       }
+      
       setIsModalVisible(false);
       loadFrameworks();
     } catch (error) {
@@ -450,19 +435,17 @@ const FrameworkManagement: React.FC = () => {
     customFrameworks: frameworks.filter(f => f.type === 'CUSTOM').length
   };
 
-  return (
-    <div>
-      <Title level={2}>フレームワーク管理</Title>
-      
-      <Alert
-        message="分析フレームワークの定義と管理を行います。各フレームワークのルールセットを設定できます。"
-        type="info"
-        showIcon
-        style={{ marginBottom: 24 }}
-      />
-
-      <Tabs activeKey={activeTab} onChange={setActiveTab}>
-        <TabPane tab="フレームワーク一覧" key="1" icon={<FileTextOutlined />}>
+  const tabItems: TabsProps['items'] = [
+    {
+      key: '1',
+      label: (
+        <span>
+          <FileTextOutlined />
+          フレームワーク一覧
+        </span>
+      ),
+      children: (
+        <>
           <Row gutter={16} style={{ marginBottom: 24 }}>
             <Col span={6}>
               <Card>
@@ -537,28 +520,51 @@ const FrameworkManagement: React.FC = () => {
               }}
             />
           </Card>
-        </TabPane>
+        </>
+      )
+    },
+    {
+      key: '2',
+      label: (
+        <span>
+          <BarChartOutlined />
+          統計情報
+        </span>
+      ),
+      children: (
+        <Row gutter={[16, 16]}>
+          <Col span={12}>
+            <Card title="フレームワークタイプ別分布">
+              {/* ここにチャートを実装 */}
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                チャートコンポーネントを実装予定
+              </div>
+            </Card>
+          </Col>
+          <Col span={12}>
+            <Card title="フレームワーク利用状況">
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                利用状況グラフを実装予定
+              </div>
+            </Card>
+          </Col>
+        </Row>
+      )
+    }
+  ];
 
-        <TabPane tab="統計情報" key="2" icon={<BarChartOutlined />}>
-          <Row gutter={[16, 16]}>
-            <Col span={12}>
-              <Card title="フレームワークタイプ別分布">
-                {/* ここにチャートを実装 */}
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-                  チャートコンポーネントを実装予定
-                </div>
-              </Card>
-            </Col>
-            <Col span={12}>
-              <Card title="フレームワーク利用状況">
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
-                  利用状況グラフを実装予定
-                </div>
-              </Card>
-            </Col>
-          </Row>
-        </TabPane>
-      </Tabs>
+  return (
+    <div>
+      <Title level={2}>フレームワーク管理</Title>
+      
+      <Alert
+        message="分析フレームワークの定義と管理を行います。各フレームワークのルールセットを設定できます。"
+        type="info"
+        showIcon
+        style={{ marginBottom: 24 }}
+      />
+
+      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
 
       {/* フレームワーク作成/編集モーダル */}
       <Modal

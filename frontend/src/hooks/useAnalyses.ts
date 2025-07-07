@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { analysisQueries } from '../graphql/queries';
+import { analysisQueries } from '../services/graphqlQueries';
 import { useAuth } from './useAuth';
 
 interface Analysis {

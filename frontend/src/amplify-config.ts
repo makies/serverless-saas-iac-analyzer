@@ -1,70 +1,38 @@
 import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/api';
+import amplifyOutputs from '../amplify_outputs.json';
 
-// Import actual Amplify configuration from deployed environment
-let amplifyConfig: any = {};
+// Use the imported Amplify configuration
+console.log('🚀 Loading Amplify Sandbox Configuration');
 
-try {
-  // Try to import the auto-generated config
-  amplifyConfig = require('../amplify_outputs.json');
-  
-  // Convert to legacy format for compatibility
-  amplifyConfig = {
-    aws_project_region: amplifyConfig.auth?.aws_region || 'ap-northeast-1',
-    aws_cognito_identity_pool_id: amplifyConfig.auth?.identity_pool_id || 'ap-northeast-1:3485d120-2059-401a-9a26-1634a14bd4dc',
-    aws_cognito_region: amplifyConfig.auth?.aws_region || 'ap-northeast-1',
-    aws_user_pools_id: amplifyConfig.auth?.user_pool_id || 'ap-northeast-1_5oHfMvBsx',
-    aws_user_pools_web_client_id: amplifyConfig.auth?.user_pool_client_id || '1nf22amnbu533h768hodnpkd66',
-    aws_cognito_username_attributes: amplifyConfig.auth?.username_attributes || ['email'],
-    aws_cognito_mfa_configuration: amplifyConfig.auth?.mfa_configuration || 'OPTIONAL',
-    aws_appsync_graphqlEndpoint: amplifyConfig.data?.url || 'https://77cdk652f5hvberzvflde6w26y.appsync-api.ap-northeast-1.amazonaws.com/graphql',
-    aws_appsync_region: amplifyConfig.data?.aws_region || 'ap-northeast-1',
-    aws_appsync_authenticationType: amplifyConfig.data?.default_authorization_type || 'AMAZON_COGNITO_USER_POOLS',
-    aws_user_files_s3_bucket: amplifyConfig.storage?.bucket_name || 'cloudbpa-app-dev-780258880044',
-    aws_user_files_s3_bucket_region: amplifyConfig.storage?.aws_region || 'ap-northeast-1',
-    // AI configuration for Bedrock integration
-    ai: {
-      bedrock: {
-        region: 'ap-northeast-1',
-        models: {
-          'claude-3-5-sonnet': {
-            modelId: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
-            providerName: 'Bedrock'
-          }
+// Amplify Gen 2の設定形式に合わせる
+const amplifyConfig = {
+  Auth: {
+    Cognito: {
+      userPoolId: amplifyOutputs.auth.user_pool_id,
+      userPoolClientId: amplifyOutputs.auth.user_pool_client_id,
+      identityPoolId: amplifyOutputs.auth.identity_pool_id,
+      signUpVerificationMethod: 'email',
+      loginWith: {
+        oauth: {
+          domain: amplifyOutputs.auth.oauth.domain,
+          scopes: amplifyOutputs.auth.oauth.scopes,
+          redirectSignIn: amplifyOutputs.auth.oauth.redirect_sign_in_uri,
+          redirectSignOut: amplifyOutputs.auth.oauth.redirect_sign_out_uri,
+          responseType: amplifyOutputs.auth.oauth.response_type,
+          providers: amplifyOutputs.auth.oauth.identity_providers
         }
       }
     }
-  };
-} catch (error) {
-  // Fallback configuration using deployed values
-  console.warn('Amplify config not found, using deployed environment configuration');
-  amplifyConfig = {
-    aws_project_region: 'ap-northeast-1',
-    aws_cognito_identity_pool_id: 'ap-northeast-1:3485d120-2059-401a-9a26-1634a14bd4dc',
-    aws_cognito_region: 'ap-northeast-1',
-    aws_user_pools_id: 'ap-northeast-1_5oHfMvBsx',
-    aws_user_pools_web_client_id: '1nf22amnbu533h768hodnpkd66',
-    aws_cognito_username_attributes: ['email'],
-    aws_cognito_mfa_configuration: 'OPTIONAL',
-    aws_appsync_graphqlEndpoint: 'https://77cdk652f5hvberzvflde6w26y.appsync-api.ap-northeast-1.amazonaws.com/graphql',
-    aws_appsync_region: 'ap-northeast-1',
-    aws_appsync_authenticationType: 'AMAZON_COGNITO_USER_POOLS',
-    aws_user_files_s3_bucket: 'cloudbpa-app-dev-780258880044',
-    aws_user_files_s3_bucket_region: 'ap-northeast-1',
-    // AI configuration for Bedrock integration
-    ai: {
-      bedrock: {
-        region: 'ap-northeast-1',
-        models: {
-          'claude-3-5-sonnet': {
-            modelId: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
-            providerName: 'Bedrock'
-          }
-        }
-      }
+  },
+  API: {
+    GraphQL: {
+      endpoint: amplifyOutputs.data.url,
+      region: amplifyOutputs.data.aws_region,
+      defaultAuthMode: 'userPool'
     }
-  };
-}
+  }
+};
 
 // Configure Amplify
 Amplify.configure(amplifyConfig);

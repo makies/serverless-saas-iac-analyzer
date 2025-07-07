@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import NewAnalysis from './pages/NewAnalysis';
 import AnalysisResults from './pages/AnalysisResults';
+import AnalysisList from './pages/AnalysisList';
 import TenantManagement from './pages/TenantManagement';
 import FrameworkManagement from './pages/FrameworkManagement';
 
@@ -47,6 +48,7 @@ function App({ signOut, user }: AppProps) {
                 text: 'プロジェクト管理',
                 items: [
                   { type: 'link', text: 'プロジェクト一覧', href: '/projects' },
+                  { type: 'link', text: '分析結果', href: '/analysis' },
                   { type: 'link', text: '新規分析', href: '/analysis/new' }
                 ]
               },
@@ -65,6 +67,7 @@ function App({ signOut, user }: AppProps) {
             <Route path="/" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:projectId" element={<Projects />} />
+            <Route path="/analysis" element={<AnalysisList />} />
             <Route path="/analysis/new" element={<NewAnalysis />} />
             <Route path="/projects/:projectId/analysis/new" element={<NewAnalysis />} />
             <Route path="/analysis/:analysisId" element={<AnalysisResults />} />
@@ -80,6 +83,7 @@ function App({ signOut, user }: AppProps) {
 // Export the app with authentication
 export default withAuthenticator(App, {
   hideSignUp: true, // Only allow sign-in, no self-registration
+  socialProviders: ['google'],
   components: {
     Header() {
       return (

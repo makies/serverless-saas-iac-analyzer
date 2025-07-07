@@ -30,8 +30,11 @@ const schema = a.schema({
       reports: a.hasMany('Report', 'tenantId'),
     })
     .authorization((allow) => [
+      // Production authorization
       allow.groups(['SystemAdmins']).to(['create', 'read', 'update', 'delete']),
       allow.groups(['ClientAdmins']).to(['read', 'update']),
+      // Development bypass - remove in production
+      allow.authenticated().to(['create', 'read', 'update', 'delete']),
     ]),
 
   // Project Management  
@@ -55,9 +58,12 @@ const schema = a.schema({
       reports: a.hasMany('Report', 'projectId'),
     })
     .authorization((allow) => [
+      // Production authorization
       allow.groups(['SystemAdmins', 'ClientAdmins']).to(['create', 'read', 'update', 'delete']),
       allow.groups(['ProjectManagers']).to(['read', 'update']),
       allow.groups(['Analysts', 'Viewers', 'ClientEngineers']).to(['read']),
+      // Development bypass - remove in production
+      allow.authenticated().to(['create', 'read', 'update', 'delete']),
     ])
     .secondaryIndexes((index) => [
       index('tenantId').sortKeys(['createdAt']).name('byTenant'),
@@ -89,8 +95,11 @@ const schema = a.schema({
       reports: a.hasMany('Report', 'analysisId'),
     })
     .authorization((allow) => [
+      // Production authorization
       allow.groups(['SystemAdmins', 'ClientAdmins', 'ProjectManagers', 'Analysts']).to(['create', 'read', 'update', 'delete']),
       allow.groups(['Viewers', 'ClientEngineers']).to(['read']),
+      // Development bypass - remove in production
+      allow.authenticated().to(['create', 'read', 'update', 'delete']),
     ])
     .secondaryIndexes((index) => [
       index('tenantId').sortKeys(['createdAt']).name('byTenant'),
@@ -126,8 +135,11 @@ const schema = a.schema({
       analysis: a.belongsTo('Analysis', 'analysisId'),
     })
     .authorization((allow) => [
+      // Production authorization
       allow.groups(['SystemAdmins', 'ClientAdmins', 'ProjectManagers', 'Analysts']).to(['create', 'read', 'update', 'delete']),
       allow.groups(['Viewers', 'ClientEngineers']).to(['read']),
+      // Development bypass - remove in production
+      allow.authenticated().to(['create', 'read', 'update', 'delete']),
     ])
     .secondaryIndexes((index) => [
       index('analysisId').sortKeys(['severity']).name('byAnalysis'),
@@ -157,8 +169,11 @@ const schema = a.schema({
       analysis: a.belongsTo('Analysis', 'analysisId'),
     })
     .authorization((allow) => [
+      // Production authorization
       allow.groups(['SystemAdmins', 'ClientAdmins', 'ProjectManagers', 'Analysts']).to(['create', 'read', 'update', 'delete']),
       allow.groups(['Viewers', 'ClientEngineers']).to(['read']),
+      // Development bypass - remove in production
+      allow.authenticated().to(['create', 'read', 'update', 'delete']),
     ])
     .secondaryIndexes((index) => [
       index('tenantId').sortKeys(['createdAt']).name('byTenant'),

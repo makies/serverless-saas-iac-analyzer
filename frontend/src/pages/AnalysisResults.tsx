@@ -24,14 +24,10 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  getAnalysisFindings,
-  mockAnalyses,
-  mockUser,
-  getUserProjects,
-} from '../services/mockData';
+import { analysisQueries, projectQueries } from '../services/graphqlQueries';
+import { useAuth } from '../hooks/useAuth';
 import type { Finding, WellArchitectedPillar } from '../types';
 
 const { Title, Text } = Typography;
@@ -39,12 +35,127 @@ const { Title, Text } = Typography;
 export default function AnalysisResults() {
   const navigate = useNavigate();
   const { analysisId } = useParams();
+  const { user } = useAuth();
   const [activeTabKey, setActiveTabKey] = useState('overview');
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [currentProject, setCurrentProject] = useState<any>(null);
+  const [findings, setFindings] = useState<Finding[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const analysis = mockAnalyses.find((a) => a.id === analysisId);
-  const findings = getAnalysisFindings(analysisId || '');
-  const userProjects = getUserProjects(mockUser.id);
-  const currentProject = userProjects.find((p) => p.id === analysis?.projectId);
+  useEffect(() => {
+    loadAnalysisData();
+  }, [analysisId]);
+
+  const loadAnalysisData = async () => {
+    if (!analysisId) {
+      console.warn('No analysisId provided');
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      console.log('Loading analysis data for ID:', analysisId);
+      
+      // For now, use mock data for the analysis detail page
+      // Later this will be replaced with actual GraphQL queries
+      const mockAnalysisData = {
+        id: analysisId,
+        name: 'サンプル分析',
+        type: 'CLOUDFORMATION',
+        status: 'COMPLETED',
+        projectId: 'project-1',
+        tenantId: 'tenant-1',
+        inputFiles: {
+          'template.yaml': 'AWSTemplateFormatVersion: "2010-09-09"...'
+        },
+        awsConfig: {
+          region: 'ap-northeast-1',
+          accountId: '123456789012'
+        },
+        resultSummary: {
+          overallScore: 75,
+          criticalFindings: 2,
+          highFindings: 5,
+          mediumFindings: 8,
+          lowFindings: 3,
+          totalFindings: 18,
+          completedAt: new Date().toISOString()
+        },
+        createdAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        createdBy: 'current-user'
+      };
+      
+      const mockProjectData = {
+        id: 'project-1',
+        name: 'デモプロジェクト',
+        description: 'デモ用のテストプロジェクト',
+        status: 'ACTIVE'
+      };
+      
+      const mockFindings = [
+        {
+          id: 'finding-1',
+          title: 'S3バケットのパブリックアクセスが有効',
+          description: 'S3バケットがパブリックアクセスを許可しています。機密データが漏洩する可能性があります。',
+          severity: 'CRITICAL',
+          pillar: 'SECURITY',
+          resource: 'AWS::S3::Bucket',
+          line: 15,
+          recommendation: 'S3バケットのパブリックアクセスをブロックし、必要に応じてIAMポリシーでアクセスを制御してください。',
+          category: 'Security',
+          ruleId: 'S3-001'
+        },
+        {
+          id: 'finding-2', 
+          title: 'Lambda関数のタイムアウト設定が不適切',
+          description: 'Lambda関数のタイムアウトが3秒に設定されており、処理が完了しない可能性があります。',
+          severity: 'HIGH',
+          pillar: 'RELIABILITY',
+          resource: 'AWS::Lambda::Function',
+          line: 28,
+          recommendation: 'Lambda関数のタイムアウトを30秒以上に設定することを推奨します。',
+          category: 'Configuration',
+          ruleId: 'LAMBDA-002'
+        },
+        {
+          id: 'finding-3',
+          title: 'RDSインスタンスのマルチAZ配置が無効',
+          description: 'RDSインスタンスがシングルAZ配置されており、可用性が低い状態です。',
+          severity: 'MEDIUM',
+          pillar: 'RELIABILITY',
+          resource: 'AWS::RDS::DBInstance',
+          line: 45,
+          recommendation: 'RDSインスタンスでマルチAZ配置を有効にしてください。',
+          category: 'Availability',
+          ruleId: 'RDS-003'
+        }
+      ];
+      
+      setAnalysis(mockAnalysisData);
+      setCurrentProject(mockProjectData);
+      setFindings(mockFindings);
+      
+      console.log('✅ Mock analysis data loaded successfully');
+      
+    } catch (error) {
+      console.error('Failed to load analysis data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <Space direction="vertical">
+          <Progress type="circle" />
+          <Text>分析データを読み込んでいます...</Text>
+        </Space>
+      </div>
+    );
+  }
 
   if (!analysis) {
     return (
@@ -61,10 +172,11 @@ export default function AnalysisResults() {
 
   const getSeverityColor = (severity: string) => {
     const colorMap = {
-      Critical: 'red',
-      High: 'orange',
-      Medium: 'blue',
-      Low: 'default',
+      CRITICAL: 'red',
+      HIGH: 'orange', 
+      MEDIUM: 'blue',
+      LOW: 'default',
+      INFO: 'default',
     };
     return colorMap[severity as keyof typeof colorMap] || 'default';
   };
@@ -76,7 +188,7 @@ export default function AnalysisResults() {
   };
 
   const getPillarScore = (pillar: WellArchitectedPillar) => {
-    const score = analysis.resultSummary?.pillars[pillar]?.score || 0;
+    const score = analysis.resultSummary?.pillars?.[pillar]?.score || 0;
     return {
       score,
       color: getScoreColor(score),
@@ -91,32 +203,32 @@ export default function AnalysisResults() {
     {
       key: 'operational-excellence',
       label: '運用上の優秀性',
-      pillar: 'OperationalExcellence' as WellArchitectedPillar,
+      pillar: 'OPERATIONAL_EXCELLENCE' as WellArchitectedPillar,
     },
     {
       key: 'security',
       label: 'セキュリティ',
-      pillar: 'Security' as WellArchitectedPillar,
+      pillar: 'SECURITY' as WellArchitectedPillar,
     },
     {
       key: 'reliability',
       label: '信頼性',
-      pillar: 'Reliability' as WellArchitectedPillar,
+      pillar: 'RELIABILITY' as WellArchitectedPillar,
     },
     {
       key: 'performance',
       label: 'パフォーマンス効率',
-      pillar: 'PerformanceEfficiency' as WellArchitectedPillar,
+      pillar: 'PERFORMANCE_EFFICIENCY' as WellArchitectedPillar,
     },
     {
       key: 'cost',
       label: 'コスト最適化',
-      pillar: 'CostOptimization' as WellArchitectedPillar,
+      pillar: 'COST_OPTIMIZATION' as WellArchitectedPillar,
     },
     {
       key: 'sustainability',
       label: '持続可能性',
-      pillar: 'Sustainability' as WellArchitectedPillar,
+      pillar: 'SUSTAINABILITY' as WellArchitectedPillar,
     },
   ];
 
@@ -400,11 +512,11 @@ export default function AnalysisResults() {
               </Text>
               <Tag
                 color={
-                  analysis.status === 'Completed'
+                  analysis.status === 'COMPLETED'
                     ? 'success'
-                    : analysis.status === 'Running'
+                    : analysis.status === 'RUNNING'
                       ? 'processing'
-                      : analysis.status === 'Failed'
+                      : analysis.status === 'FAILED'
                         ? 'error'
                         : 'default'
                 }
@@ -438,7 +550,7 @@ export default function AnalysisResults() {
       </Card>
 
       {/* 実行中プログレス */}
-      {analysis.status === 'Running' && (
+      {analysis.status === 'RUNNING' && (
         <Card style={{ marginBottom: '24px' }}>
           <Space direction="vertical" style={{ width: '100%' }}>
             <Text strong>
@@ -457,7 +569,7 @@ export default function AnalysisResults() {
       )}
 
       {/* 分析完了時のタブ表示 */}
-      {analysis.status === 'Completed' && analysis.resultSummary && (
+      {analysis.status === 'COMPLETED' && analysis.resultSummary && (
         <Card>
           <Tabs
             activeKey={activeTabKey}
@@ -469,7 +581,7 @@ export default function AnalysisResults() {
       )}
 
       {/* 分析失敗時のエラー表示 */}
-      {analysis.status === 'Failed' && (
+      {analysis.status === 'FAILED' && (
         <Alert
           message="分析に失敗しました"
           description="分析の実行中にエラーが発生しました。しばらく時間をおいて再度お試しください。"

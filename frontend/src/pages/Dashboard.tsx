@@ -28,38 +28,91 @@ import {
   Typography,
 } from 'antd';
 import dayjs from 'dayjs';
-import {
-  getUserProjects,
-  mockAnalyses,
-  mockUser,
-} from '../services/mockData';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { projectQueries, analysisQueries, tenantQueries } from '../services/graphqlQueries';
+import { createRealTestData } from '../utils/createRealTestData';
+import { useAuth } from '../hooks/useAuth';
 import type { Analysis, Project } from '../types';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
 export default function Dashboard() {
-  const userProjects = getUserProjects(mockUser.id);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [projects, setProjects] = useState<any[]>([]);
+  const [analyses, setAnalyses] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const getProjectAnalyses = (projectId: string): Analysis[] => {
-    return mockAnalyses.filter((analysis) => analysis.projectId === projectId);
+  useEffect(() => {
+    loadDashboardData();
+  }, [user]);
+
+  const loadDashboardData = async () => {
+    if (!user?.tenantId) return;
+
+    try {
+      setLoading(true);
+
+      // Load tenant data
+      const { data: tenantsData, errors: tenantsErrors } = await tenantQueries.listTenants();
+      
+      // If no tenants exist, create test data
+      if (tenantsData.length === 0) {
+        console.log('No tenants found, creating real test data...');
+        await createRealTestData();
+        // Retry loading after creating test data
+        const { data: retryTenantsData } = await tenantQueries.listTenants();
+        setTenants(retryTenantsData || []);
+      } else {
+        setTenants(tenantsData || []);
+      }
+
+      // Load projects for current tenant
+      const { data: projectsData, errors: projectsErrors } = await projectQueries.listProjects(user.tenantId);
+      if (projectsErrors.length === 0) {
+        setProjects(projectsData);
+      }
+
+      // Load recent analyses for current tenant
+      const allAnalyses: any[] = [];
+      for (const project of projectsData) {
+        const { data: projectAnalyses, errors: analysesErrors } = await analysisQueries.listAnalyses(project.id);
+        if (analysesErrors.length === 0) {
+          allAnalyses.push(...projectAnalyses);
+        }
+      }
+      setAnalyses(allAnalyses.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getProjectAnalyses = (projectId: string): any[] => {
+    return analyses.filter((analysis) => analysis.projectId === projectId);
   };
 
   const getStatusColor = (status: string) => {
     const colorMap = {
-      Active: 'success',
-      Inactive: 'warning',
-      Archived: 'default',
+      ACTIVE: 'success',
+      INACTIVE: 'warning', 
+      ARCHIVED: 'default',
     };
     return colorMap[status as keyof typeof colorMap] || 'default';
   };
 
   const getAnalysisStatusColor = (status: string) => {
     const colorMap = {
-      Completed: 'success',
-      Running: 'processing',
-      Pending: 'default',
-      Failed: 'error',
+      COMPLETED: 'success',
+      RUNNING: 'processing',
+      PENDING: 'default',
+      FAILED: 'error',
+      CANCELLED: 'default',
     };
     return colorMap[status as keyof typeof colorMap] || 'default';
   };
@@ -71,29 +124,30 @@ export default function Dashboard() {
   };
 
   // プロジェクトサマリー統計
-  const totalProjects = userProjects.length;
-  const totalAnalyses = mockAnalyses.length;
-  const completedAnalyses = mockAnalyses.filter(
-    (a) => a.status === 'Completed'
+  const totalProjects = projects.length;
+  const totalAnalyses = analyses.length;
+  const completedAnalyses = analyses.filter(
+    (a) => a.status === 'COMPLETED'
   ).length;
-  const avgScore =
-    mockAnalyses
+  const avgScore = analyses.length > 0 ? 
+    analyses
       .filter((a) => a.resultSummary)
       .reduce((sum, a) => sum + (a.resultSummary?.overallScore || 0), 0) /
-    mockAnalyses.filter((a) => a.resultSummary).length;
+    Math.max(analyses.filter((a) => a.resultSummary).length, 1) : 0;
 
   // プロジェクトテーブル用データ
-  const projectTableData = userProjects.map((project) => {
-    const analyses = getProjectAnalyses(project.id);
-    const latestAnalysis = analyses.length > 0 ? analyses[0] : null;
+  const projectTableData = projects.map((project) => {
+    const projectAnalyses = getProjectAnalyses(project.id);
+    const latestAnalysis = projectAnalyses.length > 0 ? 
+      projectAnalyses.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] : null;
 
     return {
       key: project.id,
       name: project.name,
       description: project.description,
       status: project.status,
-      memberCount: project.memberCount,
-      analysisCount: project.analysisCount,
+      memberCount: project.memberIds?.length || 0,
+      analysisCount: projectAnalyses.length,
       lastAnalysis: latestAnalysis?.createdAt,
       latestScore: latestAnalysis?.resultSummary?.overallScore,
     };
@@ -163,7 +217,11 @@ export default function Dashboard() {
       title: 'アクション',
       key: 'action',
       render: (record: any) => (
-        <Button type="link" icon={<RightOutlined />}>
+        <Button 
+          type="link" 
+          icon={<RightOutlined />}
+          onClick={() => navigate(`/projects/${record.key}`)}
+        >
           詳細
         </Button>
       ),
@@ -171,16 +229,16 @@ export default function Dashboard() {
   ];
 
   // 最新分析テーブル用データ
-  const analysisTableData = mockAnalyses.slice(0, 6).map((analysis) => ({
+  const analysisTableData = analyses.slice(0, 6).map((analysis) => ({
     key: analysis.id,
     name: analysis.name,
     type: analysis.type,
     status: analysis.status,
     score: analysis.resultSummary?.overallScore,
-    criticalFindings: analysis.resultSummary?.criticalFindings,
-    highFindings: analysis.resultSummary?.highFindings,
-    mediumFindings: analysis.resultSummary?.mediumFindings,
-    lowFindings: analysis.resultSummary?.lowFindings,
+    criticalFindings: analysis.resultSummary?.criticalFindings || 0,
+    highFindings: analysis.resultSummary?.highFindings || 0,
+    mediumFindings: analysis.resultSummary?.mediumFindings || 0,
+    lowFindings: analysis.resultSummary?.lowFindings || 0,
     createdAt: analysis.createdAt,
   }));
 
@@ -257,6 +315,17 @@ export default function Dashboard() {
     },
   ];
 
+  if (loading) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <Space direction="vertical">
+          <Progress type="circle" />
+          <Text>ダッシュボードデータを読み込んでいます...</Text>
+        </Space>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -318,11 +387,15 @@ export default function Dashboard() {
             title={
               <Space>
                 <AppstoreOutlined />
-                <span>プロジェクト一覧 ({userProjects.length})</span>
+                <span>プロジェクト一覧 ({projects.length})</span>
               </Space>
             }
             extra={
-              <Button type="primary" icon={<PlusOutlined />}>
+              <Button 
+                type="primary" 
+                icon={<PlusOutlined />}
+                onClick={() => navigate('/analysis/new')}
+              >
                 新しい分析を開始
               </Button>
             }
@@ -345,7 +418,7 @@ export default function Dashboard() {
                 <span>最新の分析結果</span>
               </Space>
             }
-            extra={<Button type="link">すべて表示</Button>}
+            extra={<Button type="link" onClick={() => navigate('/analysis')}>すべて表示</Button>}
           >
             <Table
               columns={analysisColumns}

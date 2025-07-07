@@ -18,14 +18,13 @@ import {
   Tag,
   Typography,
   Alert,
+  Progress,
 } from 'antd';
 import dayjs from 'dayjs';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  getProjectAnalyses,
-  getUserProjects,
-  mockUser,
-} from '../services/mockData';
+import { projectQueries, analysisQueries } from '../services/graphqlQueries';
+import { useAuth } from '../hooks/useAuth';
 import type { Analysis } from '../types';
 
 const { Title, Text } = Typography;
@@ -33,10 +32,53 @@ const { Title, Text } = Typography;
 export default function Projects() {
   const navigate = useNavigate();
   const { projectId } = useParams();
-  const userProjects = getUserProjects(mockUser.id);
+  const { user } = useAuth();
+  const [currentProject, setCurrentProject] = useState<any>(null);
+  const [projectAnalyses, setProjectAnalyses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const currentProject = userProjects.find((p) => p.id === projectId);
-  const projectAnalyses = projectId ? getProjectAnalyses(projectId) : [];
+  useEffect(() => {
+    loadProjectData();
+  }, [projectId, user]);
+
+  const loadProjectData = async () => {
+    if (!projectId || !user?.tenantId) return;
+
+    try {
+      setLoading(true);
+
+      // Load project details
+      const { data: projectData, errors: projectErrors } = await projectQueries.getProject(projectId);
+      if (projectErrors.length > 0) {
+        console.error('Error loading project:', projectErrors);
+        return;
+      }
+
+      setCurrentProject(projectData);
+
+      // Load analyses for this project
+      const { data: analysesData, errors: analysesErrors } = await analysisQueries.listAnalyses(projectId);
+      if (analysesErrors.length === 0) {
+        setProjectAnalyses(analysesData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      }
+
+    } catch (error) {
+      console.error('Failed to load project data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <Space direction="vertical">
+          <Progress type="circle" />
+          <Text>プロジェクトデータを読み込んでいます...</Text>
+        </Space>
+      </div>
+    );
+  }
 
   if (projectId && !currentProject) {
     return (
@@ -53,10 +95,11 @@ export default function Projects() {
 
   const getAnalysisStatusColor = (status: string) => {
     const colorMap = {
-      Completed: 'success',
-      Running: 'processing',
-      Pending: 'default',
-      Failed: 'error',
+      COMPLETED: 'success',
+      RUNNING: 'processing',
+      PENDING: 'default',
+      FAILED: 'error',
+      CANCELLED: 'default',
     };
     return colorMap[status as keyof typeof colorMap] || 'default';
   };
@@ -74,10 +117,10 @@ export default function Projects() {
     type: analysis.type,
     status: analysis.status,
     score: analysis.resultSummary?.overallScore,
-    criticalFindings: analysis.resultSummary?.criticalFindings,
-    highFindings: analysis.resultSummary?.highFindings,
-    mediumFindings: analysis.resultSummary?.mediumFindings,
-    lowFindings: analysis.resultSummary?.lowFindings,
+    criticalFindings: analysis.resultSummary?.criticalFindings || 0,
+    highFindings: analysis.resultSummary?.highFindings || 0,
+    mediumFindings: analysis.resultSummary?.mediumFindings || 0,
+    lowFindings: analysis.resultSummary?.lowFindings || 0,
     createdAt: analysis.createdAt,
   }));
 
@@ -255,7 +298,7 @@ export default function Projects() {
                 <Statistic
                   title="完了分析"
                   value={
-                    projectAnalyses.filter((a) => a.status === 'Completed')
+                    projectAnalyses.filter((a) => a.status === 'COMPLETED')
                       .length
                   }
                   prefix={<BarChartOutlined />}
@@ -268,7 +311,7 @@ export default function Projects() {
                 <Statistic
                   title="実行中分析"
                   value={
-                    projectAnalyses.filter((a) => a.status === 'Running').length
+                    projectAnalyses.filter((a) => a.status === 'RUNNING').length
                   }
                   prefix={<BarChartOutlined />}
                   valueStyle={{ color: '#faad14' }}
@@ -289,8 +332,7 @@ export default function Projects() {
                                 sum + (a.resultSummary?.overallScore || 0),
                               0
                             ) /
-                            projectAnalyses.filter((a) => a.resultSummary)
-                              .length
+                            Math.max(projectAnalyses.filter((a) => a.resultSummary).length, 1)
                         )
                       : 0
                   }

@@ -30,12 +30,17 @@ export function useAuth() {
       const firstName = idToken?.payload.given_name as string;
       const lastName = idToken?.payload.family_name as string;
 
+      // For development/demo purposes, set default values if not present
+      const storedTenantId = localStorage.getItem('demo-tenant-id');
+      const defaultTenantId = tenantId || storedTenantId || 'tenant-demo-001';
+      const defaultRole = role || 'SYSTEM_ADMIN';
+
       setUser({
         ...currentUser,
-        tenantId,
-        role,
-        firstName,
-        lastName,
+        tenantId: defaultTenantId,
+        role: defaultRole,
+        firstName: firstName || 'Demo',
+        lastName: lastName || 'User',
       });
       setError(null);
     } catch (err) {
