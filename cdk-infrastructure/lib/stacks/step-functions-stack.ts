@@ -163,15 +163,15 @@ export class StepFunctionsStack extends Construct {
       }),
       outputPath: '$.Payload',
       retryOnServiceExceptions: true,
-      timeout: cdk.Duration.minutes(15),
-      retry: [
-        {
-          errorEquals: ['Lambda.ServiceException', 'Lambda.AWSLambdaException'],
-          intervalSeconds: 5,
-          maxAttempts: 3,
-          backoffRate: 2.0,
-        },
-      ],
+      taskTimeout: stepfunctions.Timeout.duration(cdk.Duration.minutes(15)),
+    });
+
+    // Add retry configuration for framework analysis
+    runFrameworkAnalysis.addRetry({
+      errors: ['Lambda.ServiceException', 'Lambda.AWSLambdaException'],
+      interval: cdk.Duration.seconds(5),
+      maxAttempts: 3,
+      backoffRate: 2.0,
     });
 
     // Conditional Framework Initialization
@@ -210,15 +210,15 @@ export class StepFunctionsStack extends Construct {
       payload: stepfunctions.TaskInput.fromJsonPathAt('$.aggregated'),
       outputPath: '$.Payload',
       retryOnServiceExceptions: true,
-      timeout: cdk.Duration.minutes(5),
-      retry: [
-        {
-          errorEquals: ['Lambda.ServiceException', 'Lambda.AWSLambdaException'],
-          intervalSeconds: 2,
-          maxAttempts: 3,
-          backoffRate: 2.0,
-        },
-      ],
+      taskTimeout: stepfunctions.Timeout.duration(cdk.Duration.minutes(5)),
+    });
+
+    // Add retry configuration for store results
+    storeResults.addRetry({
+      errors: ['Lambda.ServiceException', 'Lambda.AWSLambdaException'],
+      interval: cdk.Duration.seconds(2),
+      maxAttempts: 3,
+      backoffRate: 2.0,
     });
 
     // Success State
@@ -281,7 +281,7 @@ export class StepFunctionsStack extends Construct {
 
     return new stepfunctions.StateMachine(this, 'AnalysisStateMachine', {
       stateMachineName: `AnalysisWorkflow-${config.environment}`,
-      definition,
+      definitionBody: stepfunctions.DefinitionBody.fromChainable(definition),
       role,
       timeout: cdk.Duration.hours(2),
       tracingEnabled: config.monitoringConfig.enableXRay,
@@ -430,7 +430,7 @@ export class StepFunctionsStack extends Construct {
 
     return new stepfunctions.StateMachine(this, 'ReportGenerationStateMachine', {
       stateMachineName: `ReportGenerationWorkflow-${config.environment}`,
-      definition,
+      definitionBody: stepfunctions.DefinitionBody.fromChainable(definition),
       role,
       timeout: cdk.Duration.minutes(30),
       tracingEnabled: config.monitoringConfig.enableXRay,

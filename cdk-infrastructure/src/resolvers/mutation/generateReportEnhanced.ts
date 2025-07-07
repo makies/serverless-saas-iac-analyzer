@@ -13,6 +13,7 @@ import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import middy from '@middy/core';
 import { v4 as uuidv4 } from 'uuid';
+import { getStepFunctionsArns } from '../../shared/utils/parameter-store';
 
 // Initialize PowerTools
 const logger = new Logger({ serviceName: 'ReportService' });
@@ -195,14 +196,13 @@ const generateReportEnhanced: AppSyncResolverHandler<GenerateReportArgs, Report>
       },
     };
 
-    // Start Step Function execution for report generation
-    const stateMachineArn =
-      process.env.REPORT_GENERATION_STATE_MACHINE_ARN ||
-      `arn:aws:states:us-east-1:123456789012:stateMachine:ReportGenerationWorkflow-${process.env.ENVIRONMENT}`;
+    // Get Step Functions ARN from Parameter Store
+    const environment = process.env.ENVIRONMENT || 'dev';
+    const { reportGenerationStateMachineArn } = await getStepFunctionsArns(environment);
 
     try {
       const startExecutionCommand = new StartExecutionCommand({
-        stateMachineArn,
+        stateMachineArn: reportGenerationStateMachineArn,
         name: `report-${reportId}-${Date.now()}`,
         input: JSON.stringify(executionInput),
       });
@@ -212,7 +212,7 @@ const generateReportEnhanced: AppSyncResolverHandler<GenerateReportArgs, Report>
       logger.info('Report generation workflow started', {
         reportId,
         executionArn: executionResult.executionArn,
-        stateMachineArn,
+        stateMachineArn: reportGenerationStateMachineArn,
       });
     } catch (sfnError) {
       // If Step Functions isn't available, log warning

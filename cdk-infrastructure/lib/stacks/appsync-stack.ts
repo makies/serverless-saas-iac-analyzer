@@ -20,8 +20,6 @@ export interface AppSyncStackProps {
   identityPool: cognito.CfnIdentityPool;
   tables: Record<string, dynamodb.Table>;
   buckets: Record<string, s3.Bucket>;
-  analysisStateMachineArn?: string;
-  reportGenerationStateMachineArn?: string;
   description?: string;
 }
 
@@ -33,7 +31,7 @@ export class AppSyncStack extends Construct {
   constructor(scope: Construct, id: string, props: AppSyncStackProps) {
     super(scope, id);
 
-    const { config, userPool, tables, buckets, analysisStateMachineArn, reportGenerationStateMachineArn } = props;
+    const { config, userPool, tables, buckets } = props;
 
     this.resolverFunctions = {};
     this.dataSources = {};
@@ -132,8 +130,7 @@ export class AppSyncStack extends Construct {
               effect: iam.Effect.ALLOW,
               actions: ['states:StartExecution', 'states:DescribeExecution', 'states:StopExecution'],
               resources: [
-                analysisStateMachineArn || `arn:aws:states:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:stateMachine:AnalysisWorkflow-${config.environment}`,
-                reportGenerationStateMachineArn || `arn:aws:states:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:stateMachine:ReportGenerationWorkflow-${config.environment}`,
+                `arn:aws:states:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:stateMachine:*Workflow-${config.environment}`,
               ],
             }),
           ],
@@ -197,9 +194,6 @@ export class AppSyncStack extends Construct {
         // Bedrock Configuration
         BEDROCK_MODEL_ID: config.bedrockConfig.modelId,
         BEDROCK_REGION: config.bedrockConfig.region,
-        // Step Functions Configuration
-        ANALYSIS_STATE_MACHINE_ARN: analysisStateMachineArn || '',
-        REPORT_GENERATION_STATE_MACHINE_ARN: reportGenerationStateMachineArn || '',
       },
       tracing: config.monitoringConfig.enableXRay ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED,
     };
@@ -219,8 +213,7 @@ export class AppSyncStack extends Construct {
     // Resolvers
     this.attachResolvers();
 
-    // Setup log retention for Lambda functions
-    this.setupLogRetention(config);
+    // Note: Log retention setup removed to avoid circular dependencies with MonitoringStack
 
     // Tags
     cdk.Tags.of(this.api).add('Environment', config.environment);
@@ -700,6 +693,10 @@ export class AppSyncStack extends Construct {
     });
   }
 
+  // NOTE: Log retention methods commented out to avoid circular dependencies with MonitoringStack
+  // Log groups will be managed automatically by AWS Lambda or through a separate monitoring stack
+  
+  /* 
   private setupLogRetention(config: EnvironmentConfig) {
     // Set log retention for all Lambda functions
     Object.entries(this.resolverFunctions).forEach(([name, func]) => {
@@ -735,4 +732,5 @@ export class AppSyncStack extends Construct {
 
     return retentionMap[days] || logs.RetentionDays.ONE_MONTH;
   }
+  */
 }

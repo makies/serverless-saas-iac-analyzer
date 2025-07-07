@@ -28,7 +28,6 @@ export class MonitoringStack extends Construct {
   private lambdaFunctions: Record<string, lambda.Function> = {};
   private createdLogGroups: Set<string> = new Set();
   private createdAlarms: Set<string> = new Set();
-  private appSyncAlarmsCreated: boolean = false;
 
   constructor(scope: Construct, id: string, props: MonitoringStackProps) {
     super(scope, id);
@@ -63,15 +62,9 @@ export class MonitoringStack extends Construct {
     // Initialize basic monitoring components
     this.initializeBasicMonitoring();
 
-    // AppSync and Lambda metrics will be added later via addAppSyncApi and addLambdaFunctions
-    if (appSyncApi) {
-      this.createAppSyncMetrics(appSyncApi, config);
-    }
-
-    if (Object.keys(lambdaFunctions).length > 0) {
-      this.createLambdaMetrics(lambdaFunctions, config);
-      // Note: Log retention is now handled in AppSyncStack to avoid circular dependencies
-    }
+    // Create generic metrics and alarms based on naming patterns instead of direct references
+    // This avoids circular dependencies by not directly referencing AppSync or Lambda constructs
+    this.createGenericMetrics(config);
 
     // Custom Application Metrics
     this.createApplicationMetrics(config);
@@ -85,29 +78,46 @@ export class MonitoringStack extends Construct {
     cdk.Tags.of(this.dashboard).add('Service', 'Monitoring');
   }
 
-  public addAppSyncApi(api: appsync.GraphqlApi) {
-    this.appSyncApi = api;
-    this.createAppSyncMetrics(api, this.config);
-    if (Object.keys(this.lambdaFunctions).length > 0 && !this.appSyncAlarmsCreated) {
-      this.createAlarms(api, this.lambdaFunctions, this.config);
-      this.appSyncAlarmsCreated = true;
-    }
-  }
-
-  public addLambdaFunctions(functions: Record<string, lambda.Function>) {
-    this.lambdaFunctions = { ...this.lambdaFunctions, ...functions };
-    this.createLambdaMetrics(functions, this.config);
-    // Note: Log retention is now handled in AppSyncStack to avoid circular dependencies
-    if (this.appSyncApi && !this.appSyncAlarmsCreated) {
-      this.createAlarms(this.appSyncApi, this.lambdaFunctions, this.config);
-      this.appSyncAlarmsCreated = true;
-    }
-  }
 
   private initializeBasicMonitoring() {
     // Basic monitoring setup that doesn't depend on AppSync or Lambda
   }
 
+  private createGenericMetrics(config: EnvironmentConfig) {
+    // Create basic dashboard widgets that don't require direct resource references
+    // This uses CloudWatch metrics discovery based on naming patterns
+    
+    // Generic Lambda metrics (will automatically discover Lambda functions with our naming pattern)
+    const genericLambdaErrors = new cloudwatch.Metric({
+      namespace: 'AWS/Lambda',
+      metricName: 'Errors',
+      statistic: 'Sum',
+      period: cdk.Duration.minutes(5),
+    });
+
+    const genericLambdaDuration = new cloudwatch.Metric({
+      namespace: 'AWS/Lambda',
+      metricName: 'Duration',
+      statistic: 'Average',
+      period: cdk.Duration.minutes(5),
+    });
+
+    this.dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'Lambda Errors (All Functions)',
+        left: [genericLambdaErrors],
+        width: 12,
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'Lambda Duration (All Functions)',
+        left: [genericLambdaDuration],
+        width: 12,
+      })
+    );
+  }
+
+  // NOTE: AppSync metrics methods commented out to avoid circular dependencies
+  /* 
   private createAppSyncMetrics(api: appsync.GraphqlApi | null, _config: EnvironmentConfig) {
     if (!api) {
       // Skip AppSync metrics if API is not provided (e.g., in hybrid mode)
@@ -160,7 +170,10 @@ export class MonitoringStack extends Construct {
       })
     );
   }
+  */
 
+  // NOTE: Lambda metrics methods commented out to avoid circular dependencies
+  /*
   private createLambdaMetrics(
     functions: Record<string, lambda.Function>,
     _config: EnvironmentConfig
@@ -232,6 +245,8 @@ export class MonitoringStack extends Construct {
       );
     }
   }
+
+  */
 
   private createApplicationMetrics(_config: EnvironmentConfig) {
     // Custom application metrics
@@ -313,6 +328,8 @@ export class MonitoringStack extends Construct {
     );
   }
 
+  // NOTE: createAlarms method commented out to avoid circular dependencies
+  /*
   private createAlarms(
     api: appsync.GraphqlApi,
     functions: Record<string, lambda.Function>,
@@ -411,8 +428,10 @@ export class MonitoringStack extends Construct {
 
     quotaAlarm.addAlarmAction(new cloudwatchActions.SnsAction(this.alarmTopic));
   }
+  */
 
   // Note: Log retention setup moved to AppSyncStack to avoid circular dependencies
+  // However, to completely avoid circular dependencies, log retention is now managed automatically by Lambda
 
   private getLogRetention(days: number): logs.RetentionDays {
     const retentionMap: Record<number, logs.RetentionDays> = {

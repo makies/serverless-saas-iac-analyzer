@@ -12,6 +12,7 @@ import { Tracer } from '@aws-lambda-powertools/tracer';
 import { injectLambdaContext } from '@aws-lambda-powertools/logger/middleware';
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer/middleware';
 import middy from '@middy/core';
+import { getStepFunctionsArns } from '../../shared/utils/parameter-store';
 
 // Initialize PowerTools
 const logger = new Logger({ serviceName: 'AnalysisService' });
@@ -116,16 +117,15 @@ const startAnalysis: AppSyncResolverHandler<StartAnalysisArgs, Analysis> = async
       },
     };
 
-    // Start Step Function execution (for now, we'll simulate this)
-    const stateMachineArn =
-      process.env.ANALYSIS_STATE_MACHINE_ARN ||
-      `arn:aws:states:us-east-1:123456789012:stateMachine:AnalysisWorkflow-${process.env.ENVIRONMENT}`;
+    // Get Step Functions ARN from Parameter Store
+    const environment = process.env.ENVIRONMENT || 'dev';
+    const { analysisStateMachineArn } = await getStepFunctionsArns(environment);
 
     let executionArn: string;
 
     try {
       const startExecutionCommand = new StartExecutionCommand({
-        stateMachineArn,
+        stateMachineArn: analysisStateMachineArn,
         name: `analysis-${analysisId}-${Date.now()}`,
         input: JSON.stringify(executionInput),
       });
@@ -136,7 +136,7 @@ const startAnalysis: AppSyncResolverHandler<StartAnalysisArgs, Analysis> = async
       logger.info('Step Function execution started', {
         analysisId,
         executionArn,
-        stateMachineArn,
+        stateMachineArn: analysisStateMachineArn,
       });
     } catch (sfnError) {
       // If Step Functions isn't available, create a mock execution ARN
@@ -145,7 +145,7 @@ const startAnalysis: AppSyncResolverHandler<StartAnalysisArgs, Analysis> = async
         error: sfnError instanceof Error ? sfnError.message : String(sfnError),
       });
 
-      executionArn = `arn:aws:states:us-east-1:123456789012:execution:AnalysisWorkflow-${process.env.ENVIRONMENT}:analysis-${analysisId}-${Date.now()}`;
+      executionArn = `arn:aws:states:us-east-1:123456789012:execution:AnalysisWorkflow-${environment}:analysis-${analysisId}-${Date.now()}`;
     }
 
     // Update analysis status to RUNNING
@@ -165,7 +165,7 @@ const startAnalysis: AppSyncResolverHandler<StartAnalysisArgs, Analysis> = async
         ':status': 'RUNNING',
         ':updatedAt': now,
         ':execution': {
-          stateMachineArn,
+          stateMachineArn: analysisStateMachineArn,
           executionArn,
           startedAt: now,
         },
