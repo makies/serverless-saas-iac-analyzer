@@ -123,6 +123,151 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
       });
     });
 
+    // Lambda functions for Cognito triggers
+    const cognitoTriggersFunction = new cdk.aws_lambda_nodejs.NodejsFunction(this, 'CognitoTriggersFunction', {
+      runtime: cdk.aws_lambda.Runtime.NODEJS_22_X,
+      handler: 'preAuthentication',
+      entry: require('path').join(__dirname, '../src/functions/cognito-triggers.ts'),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 512,
+      environment: {
+        NODE_ENV: 'production',
+        ENVIRONMENT: config.environment,
+        SBT_TENANTS_TABLE: `SBT-Tenants-${config.environment}`,
+        USER_ANALYTICS_TABLE: `CloudBPA-UserAnalytics-${config.environment}`,
+        EVENT_BUS_NAME: `CloudBPA-SBT-Events-${config.environment}`,
+        LOG_LEVEL: config.lambdaConfig.logLevel,
+      },
+      tracing: cdk.aws_lambda.Tracing.ACTIVE,
+      functionName: `CloudBPA-CognitoTriggers-${config.environment}`,
+    });
+
+    // Grant permissions for Cognito triggers
+    cognitoTriggersFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'dynamodb:GetItem',
+          'dynamodb:PutItem',
+          'dynamodb:UpdateItem',
+          'dynamodb:Query',
+        ],
+        resources: [
+          `arn:aws:dynamodb:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:table/SBT-Tenants-${config.environment}`,
+          `arn:aws:dynamodb:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:table/CloudBPA-UserAnalytics-${config.environment}`,
+          `arn:aws:dynamodb:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:table/CloudBPA-UserMetadata-${config.environment}`,
+        ],
+      })
+    );
+
+    cognitoTriggersFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['events:PutEvents'],
+        resources: [`arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:event-bus/CloudBPA-SBT-Events-${config.environment}`],
+      })
+    );
+
+    // User Pool with Lambda triggers
+    this.userPool = new cognito.UserPool(this, 'UserPool', {
+      userPoolName: `${config.cognitoConfig.userPoolName}-${config.environment}`,
+      signInAliases: {
+        email: true,
+        username: true,
+      },
+      signInCaseSensitive: false,
+      standardAttributes: {
+        email: {
+          required: true,
+          mutable: true,
+        },
+        givenName: {
+          required: true,
+          mutable: true,
+        },
+        familyName: {
+          required: true,
+          mutable: true,
+        },
+      },
+      customAttributes: {
+        tenantId: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 50,
+          mutable: true,
+        }),
+        role: new cognito.StringAttribute({
+          minLen: 1,
+          maxLen: 50,
+          mutable: true,
+        }),
+        projectIds: new cognito.StringAttribute({
+          minLen: 0,
+          maxLen: 2000,
+          mutable: true,
+        }),
+      },
+      passwordPolicy: {
+        minLength: 12,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireDigits: true,
+        requireSymbols: true,
+        tempPasswordValidity: cdk.Duration.days(7),
+      },
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      selfSignUpEnabled: false, // 招待制
+      userInvitation: {
+        emailBody: `こんにちは,
+
+${config.cognitoConfig.userPoolName}にご招待いたします。
+
+ユーザー名: {username}
+一時パスワード: {####}
+
+初回ログイン後にパスワードを変更してください。
+
+アプリケーション URL: ${config.cognitoConfig.allowedOrigins[0]}
+
+ご質問がございましたら、システム管理者までお問い合わせください。`,
+        emailSubject: `${config.cognitoConfig.userPoolName}への招待`,
+        smsMessage: `${config.cognitoConfig.userPoolName}への招待 - ユーザー名: {username}, 一時パスワード: {####}`,
+      },
+      autoVerify: {
+        email: true,
+      },
+      userVerification: {
+        emailSubject: `${config.cognitoConfig.userPoolName} - メールアドレスの確認`,
+        emailBody: `
+メールアドレスの確認コード: {####}
+
+このコードを入力してメールアドレスを確認してください。
+        `,
+        emailStyle: cognito.VerificationEmailStyle.CODE,
+      },
+      deviceTracking: {
+        challengeRequiredOnNewDevice: true,
+        deviceOnlyRememberedOnUserPrompt: true,
+      },
+      mfa: cognito.Mfa.OPTIONAL,
+      mfaSecondFactor: {
+        sms: true,
+        otp: true,
+      },
+      lambdaTriggers: {
+        preAuthentication: cognitoTriggersFunction,
+        postAuthentication: cognitoTriggersFunction,
+        preTokenGeneration: cognitoTriggersFunction,
+        postConfirmation: cognitoTriggersFunction,
+        defineAuthChallenge: cognitoTriggersFunction,
+        createAuthChallenge: cognitoTriggersFunction,
+        verifyAuthChallengeResponse: cognitoTriggersFunction,
+      },
+      deletionProtection: config.environment === 'prod',
+      removalPolicy:
+        config.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+    });
+
     // User Pool Client
     this.userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
       userPool: this.userPool,
@@ -130,7 +275,7 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
       authFlows: {
         userSrp: true,
         adminUserPassword: true,
-        custom: false,
+        custom: true, // Enable custom auth for MFA
         userPassword: false,
       },
       generateSecret: false, // SPAなのでシークレット不要

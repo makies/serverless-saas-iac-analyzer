@@ -126,6 +126,26 @@ export class SBTAmplifyIntegrationStack extends cdk.Stack {
                 `arn:aws:ssm:${this.region}:${this.account}:parameter/cloudbpa/${config.environment}/*`,
               ],
             }),
+            // SES access for email notifications
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'ses:SendEmail',
+                'ses:SendTemplatedEmail',
+                'ses:SendBulkTemplatedEmail',
+              ],
+              resources: ['*'],
+            }),
+            // CloudWatch access for metrics
+            new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'cloudwatch:GetMetricStatistics',
+                'cloudwatch:ListMetrics',
+                'cloudwatch:GetMetricData',
+              ],
+              resources: ['*'],
+            }),
           ],
         }),
       },
@@ -173,6 +193,53 @@ export class SBTAmplifyIntegrationStack extends cdk.Stack {
       functionName: `CloudBPA-DataSync-${config.environment}`,
     });
 
+    // Lambda function for tenant onboarding automation
+    const onboardingFunction = new nodejs.NodejsFunction(this, 'OnboardingAutomationFunction', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'handler',
+      entry: path.join(__dirname, '../src/functions/tenant-onboarding-automation.ts'),
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 1024,
+      role: sbtIntegrationRole,
+      environment: {
+        NODE_ENV: 'production',
+        ENVIRONMENT: config.environment,
+        SBT_TENANTS_TABLE: sbtTenantsTable.tableName,
+        PROJECTS_TABLE: `CloudBPA-Projects-${config.environment}`,
+        FRAMEWORK_REGISTRY_TABLE: `CloudBPA-FrameworkRegistry-${config.environment}`,
+        EVENT_BUS_NAME: this.sbtEventBridge.eventBusName,
+        USER_POOL_ID: props.userPoolId || 'PLACEHOLDER',
+        EMAIL_TEMPLATE_NAME: 'TenantWelcomeTemplate',
+        FROM_EMAIL: config.sesConfig?.fromEmail || 'noreply@cloudbpa.com',
+        SUPPORT_EMAIL: config.sesConfig?.supportEmail || 'support@cloudbpa.com',
+        DOMAIN_NAME: config.domainName || 'app.cloudbpa.com',
+        LOG_LEVEL: config.lambdaConfig.logLevel,
+      },
+      tracing: lambda.Tracing.ACTIVE,
+      functionName: `CloudBPA-OnboardingAutomation-${config.environment}`,
+    });
+
+    // Lambda function for Control Plane dashboard
+    const controlPlaneDashboardFunction = new nodejs.NodejsFunction(this, 'ControlPlaneDashboardFunction', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'handler',
+      entry: path.join(__dirname, '../src/functions/control-plane-dashboard.ts'),
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 1024,
+      role: sbtIntegrationRole,
+      environment: {
+        NODE_ENV: 'production',
+        ENVIRONMENT: config.environment,
+        SBT_TENANTS_TABLE: sbtTenantsTable.tableName,
+        ANALYSES_TABLE: `CloudBPA-Analyses-${config.environment}`,
+        TENANT_ANALYTICS_TABLE: `CloudBPA-TenantAnalytics-${config.environment}`,
+        FRAMEWORK_REGISTRY_TABLE: `CloudBPA-FrameworkRegistry-${config.environment}`,
+        LOG_LEVEL: config.lambdaConfig.logLevel,
+      },
+      tracing: lambda.Tracing.ACTIVE,
+      functionName: `CloudBPA-ControlPlaneDashboard-${config.environment}`,
+    });
+
     // EventBridge rules for SBT events
     const tenantCreatedRule = new events.Rule(this, 'TenantCreatedRule', {
       eventBus: this.sbtEventBridge,
@@ -201,10 +268,23 @@ export class SBTAmplifyIntegrationStack extends cdk.Stack {
       description: 'Process tenant deletion/suspension events from SBT',
     });
 
+    // EventBridge rule for tenant onboarding automation
+    const tenantOnboardingRule = new events.Rule(this, 'TenantOnboardingRule', {
+      eventBus: this.sbtEventBridge,
+      eventPattern: {
+        source: ['sbt.controlplane'],
+        detailType: ['Tenant Created'],
+      },
+      description: 'Trigger tenant onboarding automation when tenant is created',
+    });
+
     // Add targets to EventBridge rules
     tenantCreatedRule.addTarget(new targets.LambdaFunction(dataSyncFunction));
     tenantUpdatedRule.addTarget(new targets.LambdaFunction(dataSyncFunction));
     tenantDeletedRule.addTarget(new targets.LambdaFunction(dataSyncFunction));
+    
+    // Add onboarding automation target
+    tenantOnboardingRule.addTarget(new targets.LambdaFunction(onboardingFunction));
 
     // SSM Parameters for cross-stack configuration
     new ssm.StringParameter(this, 'SBTEventBusArnParameter', {
@@ -273,12 +353,56 @@ export class SBTAmplifyIntegrationStack extends cdk.Stack {
       }
     );
 
-    // Add methods
+    // Add methods for tenant management
     tenantsResource.addMethod('GET', lambdaIntegration);
     tenantsResource.addMethod('POST', lambdaIntegration);
     tenantResource.addMethod('GET', lambdaIntegration);
     tenantResource.addMethod('PUT', lambdaIntegration);
     tenantResource.addMethod('DELETE', lambdaIntegration);
+
+    // Add Control Plane Dashboard API
+    const dashboardResource = sbtApi.root.addResource('dashboard');
+    const dashboardLambdaIntegration = new cdk.aws_apigateway.LambdaIntegration(
+      controlPlaneDashboardFunction,
+      {
+        requestTemplates: {
+          'application/json': JSON.stringify({
+            httpMethod: '$context.httpMethod',
+            resourcePath: '$context.resourcePath',
+            pathParameters: '$input.params().path',
+            queryStringParameters: '$input.params().querystring',
+            body: '$input.json("$")',
+            requestContext: {
+              accountId: '$context.accountId',
+              requestId: '$context.requestId',
+              identity: {
+                cognitoIdentityId: '$context.identity.cognitoIdentityId',
+                cognitoAuthenticationType: '$context.identity.cognitoAuthenticationType',
+              },
+            },
+          }),
+        },
+      }
+    );
+
+    // Dashboard endpoints
+    const metricsResource = dashboardResource.addResource('metrics');
+    const dashboardTenantsResource = dashboardResource.addResource('tenants');
+    const dashboardTenantResource = dashboardTenantsResource.addResource('{tenantId}');
+    const analyticsResource = dashboardResource.addResource('analytics');
+    const crossTenantResource = analyticsResource.addResource('cross-tenant');
+    const frameworksResource = dashboardResource.addResource('frameworks');
+    const adoptionResource = frameworksResource.addResource('adoption');
+    const healthResource = dashboardResource.addResource('health');
+    const overviewResource = healthResource.addResource('overview');
+
+    // Add dashboard methods
+    metricsResource.addMethod('GET', dashboardLambdaIntegration);
+    dashboardTenantsResource.addMethod('GET', dashboardLambdaIntegration);
+    dashboardTenantResource.addMethod('GET', dashboardLambdaIntegration);
+    crossTenantResource.addMethod('GET', dashboardLambdaIntegration);
+    adoptionResource.addMethod('GET', dashboardLambdaIntegration);
+    overviewResource.addMethod('GET', dashboardLambdaIntegration);
 
     // CloudFormation outputs
     new cdk.CfnOutput(this, 'SBTApiUrl', {
