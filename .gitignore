@@ -132,3 +132,6 @@ credentials.json
 # Local configuration
 config.local.json
 settings.local.json
+
+# Generated test files
+test-files/
