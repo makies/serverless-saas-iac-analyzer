@@ -5,6 +5,7 @@ import {
 } from '@ant-design/icons';
 import {
   Alert,
+  App,
   Breadcrumb,
   Button,
   Card,
@@ -20,8 +21,11 @@ import {
 } from 'antd';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { uploadData } from 'aws-amplify/storage';
+import { generateClient } from 'aws-amplify/api';
 import { getUserProjects, mockUser } from '../services/mockData';
 import type { AnalysisType } from '../types';
+import type { Schema } from '../../../amplify/data/resource';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -30,6 +34,7 @@ export default function NewAnalysis() {
   const navigate = useNavigate();
   const { projectId } = useParams();
   const userProjects = getUserProjects(mockUser.id);
+  const { message } = App.useApp();
 
   const [form] = Form.useForm();
   const [analysisType, setAnalysisType] = useState<AnalysisType | ''>('');
@@ -62,43 +67,158 @@ export default function NewAnalysis() {
   const handleSubmit = async (values: any) => {
     setIsSubmitting(true);
 
-    // モックの分析開始処理
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      // Create GraphQL client
+      const client = generateClient<Schema>();
+      
+      // Upload files to S3 first
+      const uploadedFiles = [];
+      
+      if (analysisType && analysisType !== 'LiveScan' && files.length > 0) {
+        message.info('ファイルをアップロード中...');
+        
+        for (const file of files) {
+          try {
+            // Generate unique file path with tenant isolation
+            const tenantId = mockUser.tenantId; // Replace with actual tenant ID from auth
+            const timestamp = Date.now();
+            const fileName = `public/${timestamp}-${file.name}`;
+            
+            // Upload file to S3 using Amplify Gen 2 Storage
+            const result = await uploadData({
+              path: fileName, // Use 'path' instead of 'key' for Gen 2
+              data: file.originFileObj,
+              options: {
+                contentType: file.type || 'application/octet-stream',
+                metadata: {
+                  originalName: file.name,
+                  analysisType: analysisType as string,
+                  tenantId: tenantId,
+                }
+              }
+            }).result;
+            
+            uploadedFiles.push({
+              key: result.path || fileName,
+              name: file.name,
+              size: file.size,
+              type: file.type
+            });
+            
+            console.log('File uploaded successfully:', result.path || fileName);
+          } catch (uploadError) {
+            console.error('File upload failed:', uploadError);
+            message.error(`ファイル "${file.name}" のアップロードに失敗しました`);
+            throw uploadError;
+          }
+        }
+        
+        message.success('ファイルのアップロードが完了しました');
+      }
 
-    // 新しい分析のIDを生成（実際は backend から返される）
-    const newAnalysisId = `analysis-${Date.now()}`;
+      // Create analysis record in GraphQL
+      message.info('分析を作成中...');
+      
+      const analysisTypeForDB = (analysisType === 'CloudFormation' ? 'CLOUDFORMATION' : 
+                                analysisType === 'Terraform' ? 'TERRAFORM' :
+                                analysisType === 'CDK' ? 'CDK' :
+                                analysisType === 'LiveScan' ? 'LIVE_SCAN' : 'CLOUDFORMATION');
+      
+      const analysisInput = {
+        tenantId: mockUser.tenantId,
+        projectId: values.projectId,
+        name: values.analysisName,
+        type: analysisTypeForDB,
+        status: 'PENDING' as 'PENDING',
+        inputFiles: analysisTypeForDB === 'LIVE_SCAN' ? null : JSON.stringify(uploadedFiles),
+        awsConfig: analysisTypeForDB === 'LIVE_SCAN' ? JSON.stringify({
+          region: values.awsRegion,
+          accountId: values.awsAccountId
+        }) : null,
+        createdBy: mockUser.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-    console.log('Analysis started:', {
-      id: newAnalysisId,
-      ...values,
-      files: files.map((f) => f.name),
-    });
+      const createResult = await client.models.Analysis.create(analysisInput);
+      
+      if (createResult.errors) {
+        console.error('GraphQL errors:', createResult.errors);
+        throw new Error('分析の作成に失敗しました');
+      }
 
-    setIsSubmitting(false);
+      const newAnalysisId = createResult.data?.id;
+      
+      if (!newAnalysisId) {
+        throw new Error('分析IDが取得できませんでした');
+      }
 
-    // 分析結果ページへリダイレクト
-    navigate(`/analysis/${newAnalysisId}`);
+      console.log('Analysis created successfully:', {
+        id: newAnalysisId,
+        ...values,
+        uploadedFiles,
+      });
+
+      message.success('分析が正常に作成されました');
+      setIsSubmitting(false);
+
+      // 分析結果ページへリダイレクト
+      navigate(`/analysis/${newAnalysisId}`);
+      
+    } catch (error) {
+      console.error('Analysis creation failed:', error);
+      message.error(error instanceof Error ? error.message : '分析の作成に失敗しました');
+      setIsSubmitting(false);
+    }
   };
 
   const uploadProps = {
     name: 'file',
     multiple: true,
     fileList: files,
-    beforeUpload: () => false, // ファイルアップロードを防ぐ（後でhandleする）
+    beforeUpload: (file: any) => {
+      // Validate file size (10MB limit)
+      const isLt10M = file.size / 1024 / 1024 < 10;
+      if (!isLt10M) {
+        message.error('ファイルサイズは10MB未満にしてください');
+        return false;
+      }
+      
+      // Validate file type
+      const acceptedTypes = getFileAccept(analysisType);
+      if (acceptedTypes) {
+        const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+        const acceptedExtensions = acceptedTypes.split(',');
+        const isValidType = acceptedExtensions.some(ext => 
+          ext.trim().toLowerCase() === fileExtension
+        );
+        
+        if (!isValidType) {
+          message.error(`許可されていないファイル形式です。対応形式: ${acceptedTypes}`);
+          return false;
+        }
+      }
+      
+      // Store file without uploading yet (upload happens on form submit)
+      return false;
+    },
     onChange: (info: any) => {
-      setFiles(info.fileList);
+      setFiles(info.fileList.filter((file: any) => file.status !== 'error'));
     },
     accept: getFileAccept(analysisType),
+    onRemove: (file: any) => {
+      setFiles(files.filter(f => f.uid !== file.uid));
+    },
   };
 
   function getFileAccept(type: string) {
     switch (type) {
       case 'CloudFormation':
-        return '.yaml,.yml,.json';
+        return '.yaml,.yml,.json,.zip';
       case 'Terraform':
-        return '.tf,.tfvars';
+        return '.tf,.tfvars,.zip';
       case 'CDK':
-        return '.ts,.js,.py';
+        return '.ts,.js,.py,.zip';
       default:
         return undefined;
     }
@@ -228,9 +348,18 @@ export default function NewAnalysis() {
                   label="ファイルアップロード"
                   name="files"
                   rules={[
-                    { required: true, message: 'ファイルをアップロードしてください' },
+                    { 
+                      required: true, 
+                      message: 'ファイルをアップロードしてください',
+                      validator: (_, value) => {
+                        if (analysisType !== '' && analysisType !== 'LiveScan' && files.length === 0) {
+                          return Promise.reject(new Error('ファイルをアップロードしてください'));
+                        }
+                        return Promise.resolve();
+                      }
+                    },
                   ]}
-                  extra={`${analysisType}ファイルをアップロードしてください（最大10MB）`}
+                  extra={`${analysisType}ファイルまたはZIPアーカイブをアップロードしてください（最大10MB）`}
                 >
                   <Dragger {...uploadProps} style={{ padding: '40px' }}>
                     <p className="ant-upload-drag-icon">
@@ -240,7 +369,7 @@ export default function NewAnalysis() {
                       ファイルをここにドラッグ&ドロップするか、クリックして選択
                     </p>
                     <p className="ant-upload-hint">
-                      複数ファイルの同時アップロードに対応しています。
+                      複数ファイルの同時アップロードとZIPファイルに対応しています。
                       ファイルサイズは10MB以下にしてください。
                     </p>
                   </Dragger>

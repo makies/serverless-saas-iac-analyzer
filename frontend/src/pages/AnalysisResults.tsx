@@ -3,6 +3,7 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   FileTextOutlined,
+  LinkOutlined,
   PlusOutlined,
   SafetyOutlined,
 } from '@ant-design/icons';
@@ -12,6 +13,7 @@ import {
   Breadcrumb,
   Button,
   Card,
+  Checkbox,
   Col,
   Descriptions,
   Empty,
@@ -41,6 +43,7 @@ export default function AnalysisResults() {
   const [currentProject, setCurrentProject] = useState<any>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSeverities, setSelectedSeverities] = useState<string[]>(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']);
 
   useEffect(() => {
     loadAnalysisData();
@@ -75,11 +78,11 @@ export default function AnalysisResults() {
         },
         resultSummary: {
           overallScore: 75,
-          criticalFindings: 2,
-          highFindings: 5,
-          mediumFindings: 8,
-          lowFindings: 3,
-          totalFindings: 18,
+          criticalFindings: 1,
+          highFindings: 1,
+          mediumFindings: 3,
+          lowFindings: 2,
+          totalFindings: 7,
           completedAt: new Date().toISOString()
         },
         createdAt: new Date().toISOString(),
@@ -105,7 +108,8 @@ export default function AnalysisResults() {
           line: 15,
           recommendation: 'S3バケットのパブリックアクセスをブロックし、必要に応じてIAMポリシーでアクセスを制御してください。',
           category: 'Security',
-          ruleId: 'S3-001'
+          ruleId: 'S3-001',
+          documentationUrl: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html'
         },
         {
           id: 'finding-2', 
@@ -115,9 +119,10 @@ export default function AnalysisResults() {
           pillar: 'RELIABILITY',
           resource: 'AWS::Lambda::Function',
           line: 28,
-          recommendation: 'Lambda関数のタイムアウトを30秒以上に設定することを推奨します。',
+          recommendation: 'Lambda関数のタイムアウトを30秒以上に設定することを推奨します。処理時間に応じて適切な値を設定してください。',
           category: 'Configuration',
-          ruleId: 'LAMBDA-002'
+          ruleId: 'LAMBDA-002',
+          documentationUrl: 'https://docs.aws.amazon.com/lambda/latest/dg/configuration-function-common.html#configuration-timeout-console'
         },
         {
           id: 'finding-3',
@@ -127,9 +132,49 @@ export default function AnalysisResults() {
           pillar: 'RELIABILITY',
           resource: 'AWS::RDS::DBInstance',
           line: 45,
-          recommendation: 'RDSインスタンスでマルチAZ配置を有効にしてください。',
+          recommendation: 'RDSインスタンスでマルチAZ配置を有効にしてください。CloudFormationテンプレートでMultiAZ: trueを設定し、自動フェイルオーバー機能を有効化することで、AZ障害時の可用性を向上させます。',
           category: 'Availability',
-          ruleId: 'RDS-003'
+          ruleId: 'RDS-003',
+          documentationUrl: 'https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZ.html'
+        },
+        {
+          id: 'finding-4',
+          title: 'CloudWatch Logsの保持期間が無制限',
+          description: 'CloudWatch Logsの保持期間が設定されておらず、ログが無期限に保存されコストが増大します。',
+          severity: 'LOW',
+          pillar: 'COST_OPTIMIZATION',
+          resource: 'AWS::Logs::LogGroup',
+          line: 62,
+          recommendation: 'RetentionInDaysプロパティを設定してログの保持期間を制限してください。一般的には7日、30日、90日などビジネス要件に応じて設定します。',
+          category: 'Cost Management',
+          ruleId: 'LOGS-001',
+          documentationUrl: 'https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/Working-with-log-groups-and-streams.html#SettingLogRetention'
+        },
+        {
+          id: 'finding-5',
+          title: 'Lambda関数にDead Letter Queueが未設定',
+          description: 'Lambda関数で処理に失敗した場合の例外処理機構が設定されていません。',
+          severity: 'MEDIUM',
+          pillar: 'RELIABILITY',
+          resource: 'AWS::Lambda::Function',
+          line: 35,
+          recommendation: 'DeadLetterConfigプロパティでSQSキューまたはSNSトピックを指定し、処理失敗時のメッセージを確実に捕捉できるようにしてください。',
+          category: 'Error Handling',
+          ruleId: 'LAMBDA-003',
+          documentationUrl: 'https://docs.aws.amazon.com/lambda/latest/dg/invocation-async.html#invocation-dlq'
+        },
+        {
+          id: 'finding-6',
+          title: 'EC2インスタンスにdetailed monitoringが無効',
+          description: 'EC2インスタンスの詳細監視が無効になっており、パフォーマンス分析が困難です。',
+          severity: 'LOW',
+          pillar: 'PERFORMANCE_EFFICIENCY',
+          resource: 'AWS::EC2::Instance',
+          line: 78,
+          recommendation: 'Monitoring: trueを設定してCloudWatchの詳細監視を有効にし、1分間隔でのメトリクス収集を行ってください。',
+          category: 'Monitoring',
+          ruleId: 'EC2-004',
+          documentationUrl: 'https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-cloudwatch-new.html'
         }
       ];
       
@@ -172,13 +217,13 @@ export default function AnalysisResults() {
 
   const getSeverityColor = (severity: string) => {
     const colorMap = {
-      CRITICAL: 'red',
-      HIGH: 'orange', 
-      MEDIUM: 'blue',
-      LOW: 'default',
-      INFO: 'default',
+      CRITICAL: '#ff4d4f',
+      HIGH: '#fa8c16', 
+      MEDIUM: '#1890ff',
+      LOW: '#8c8c8c',
+      INFO: '#8c8c8c',
     };
-    return colorMap[severity as keyof typeof colorMap] || 'default';
+    return colorMap[severity as keyof typeof colorMap] || '#8c8c8c';
   };
 
   const getScoreColor = (score: number) => {
@@ -237,15 +282,16 @@ export default function AnalysisResults() {
       title: '重要度',
       dataIndex: 'severity',
       key: 'severity',
-      width: 100,
+      width: 90,
       render: (severity: string) => (
         <Tag color={getSeverityColor(severity)}>{severity}</Tag>
       ),
     },
     {
-      title: 'タイトル',
+      title: 'タイトル・説明',
       dataIndex: 'title',
       key: 'title',
+      width: 280,
       render: (title: string, record: Finding) => (
         <Space direction="vertical" size={0}>
           <Text strong>{title}</Text>
@@ -259,15 +305,40 @@ export default function AnalysisResults() {
       title: 'リソース',
       dataIndex: 'resource',
       key: 'resource',
-      width: 150,
+      width: 160,
       render: (resource: string) => resource || '-',
     },
     {
-      title: '行番号',
+      title: '行',
       dataIndex: 'line',
       key: 'line',
-      width: 80,
+      width: 60,
       render: (line: number) => (line ? `L${line}` : '-'),
+    },
+    {
+      title: '推奨対処方法・ドキュメント',
+      dataIndex: 'recommendation',
+      key: 'recommendation',
+      width: 400,
+      render: (recommendation: string, record: Finding) => (
+        <Space direction="vertical" size={4} style={{ width: '100%' }}>
+          <Text style={{ fontSize: '12px' }}>
+            {recommendation || '対処方法を確認中...'}
+          </Text>
+          {record.documentationUrl && (
+            <Button
+              type="link"
+              size="small"
+              icon={<LinkOutlined />}
+              href={record.documentationUrl}
+              target="_blank"
+              style={{ padding: 0, fontSize: '11px', height: 'auto' }}
+            >
+              AWS公式ドキュメント
+            </Button>
+          )}
+        </Space>
+      ),
     },
   ];
 
@@ -297,6 +368,99 @@ export default function AnalysisResults() {
       title: analysis.name,
     },
   ];
+
+  const getSeverityFindings = (severity: string) => {
+    return findings.filter((f) => f.severity === severity);
+  };
+
+  const getFilteredFindings = (targetFindings: Finding[]) => {
+    return targetFindings.filter((f) => selectedSeverities.includes(f.severity));
+  };
+
+  const getSeverityFilterComponent = () => {
+    const severityOptions = [
+      { label: 'Critical', value: 'CRITICAL', color: '#ff4d4f' },
+      { label: 'High', value: 'HIGH', color: '#fa8c16' },
+      { label: 'Medium', value: 'MEDIUM', color: '#1890ff' },
+      { label: 'Low', value: 'LOW', color: '#d9d9d9' },
+    ];
+
+    return (
+      <Card size="small" style={{ marginBottom: '16px' }}>
+        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+          <Text strong>重要度でフィルタ：</Text>
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: '8px'
+          }}>
+            {severityOptions.map((option) => {
+              const isSelected = selectedSeverities.includes(option.value);
+              const baseColor = getSeverityColor(option.value);
+              
+              // 選択時の背景色と文字色を調整
+              const getSelectedStyles = (color: string) => {
+                switch (color) {
+                  case '#ff4d4f': // Critical (red)
+                    return { bg: '#ff4d4f', text: '#fff' };
+                  case '#fa8c16': // High (orange)
+                    return { bg: '#fa8c16', text: '#fff' };
+                  case '#1890ff': // Medium (blue)
+                    return { bg: '#1890ff', text: '#fff' };
+                  case '#8c8c8c': // Low (gray)
+                    return { bg: '#8c8c8c', text: '#fff' }; // 中くらいのグレーで可読性向上
+                  default:
+                    return { bg: color, text: '#fff' };
+                }
+              };
+              
+              const selectedStyles = getSelectedStyles(baseColor);
+              
+              return (
+                <div
+                  key={option.value}
+                  onClick={() => {
+                    const newSelected = isSelected 
+                      ? selectedSeverities.filter(s => s !== option.value)
+                      : [...selectedSeverities, option.value];
+                    setSelectedSeverities(newSelected);
+                  }}
+                  style={{
+                    backgroundColor: isSelected ? selectedStyles.bg : '#fff',
+                    border: `2px solid ${isSelected ? selectedStyles.bg : baseColor}`,
+                    borderRadius: '6px',
+                    color: isSelected ? selectedStyles.text : baseColor,
+                    fontWeight: isSelected ? '600' : 'normal',
+                    height: '32px',
+                    padding: '0 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    fontSize: '14px',
+                    userSelect: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.backgroundColor = '#f5f5f5';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.backgroundColor = '#fff';
+                    }
+                  }}
+                >
+                  {option.label}
+                </div>
+              );
+            })}
+          </div>
+        </Space>
+      </Card>
+    );
+  };
 
   const tabItems = [
     {
@@ -328,8 +492,18 @@ export default function AnalysisResults() {
                     strokeColor={getScoreColor(
                       analysis.resultSummary?.overallScore || 0
                     )}
-                    strokeWidth={20}
-                    format={(percent) => `${percent}%`}
+                    size={20}
+                    format={(percent) => (
+                      <span
+                        style={{
+                          color: getScoreColor(analysis.resultSummary?.overallScore || 0),
+                          fontSize: '48px',
+                          fontWeight: '600',
+                        }}
+                      >
+                        {percent}%
+                      </span>
+                    )}
                   />
                 </Col>
               </Row>
@@ -341,7 +515,15 @@ export default function AnalysisResults() {
             <Card title="検出事項サマリー">
               <Row gutter={[16, 16]}>
                 <Col span={6}>
-                  <Card size="small" style={{ textAlign: 'center' }}>
+                  <Card 
+                    size="small" 
+                    style={{ textAlign: 'center', cursor: 'pointer' }}
+                    hoverable
+                    onClick={() => {
+                      setActiveTabKey('all');
+                      setSelectedSeverities(['CRITICAL']);
+                    }}
+                  >
                     <Statistic
                       title="Critical"
                       value={analysis.resultSummary?.criticalFindings}
@@ -350,7 +532,15 @@ export default function AnalysisResults() {
                   </Card>
                 </Col>
                 <Col span={6}>
-                  <Card size="small" style={{ textAlign: 'center' }}>
+                  <Card 
+                    size="small" 
+                    style={{ textAlign: 'center', cursor: 'pointer' }}
+                    hoverable
+                    onClick={() => {
+                      setActiveTabKey('all');
+                      setSelectedSeverities(['HIGH']);
+                    }}
+                  >
                     <Statistic
                       title="High"
                       value={analysis.resultSummary?.highFindings}
@@ -359,7 +549,15 @@ export default function AnalysisResults() {
                   </Card>
                 </Col>
                 <Col span={6}>
-                  <Card size="small" style={{ textAlign: 'center' }}>
+                  <Card 
+                    size="small" 
+                    style={{ textAlign: 'center', cursor: 'pointer' }}
+                    hoverable
+                    onClick={() => {
+                      setActiveTabKey('all');
+                      setSelectedSeverities(['MEDIUM']);
+                    }}
+                  >
                     <Statistic
                       title="Medium"
                       value={analysis.resultSummary?.mediumFindings}
@@ -368,7 +566,15 @@ export default function AnalysisResults() {
                   </Card>
                 </Col>
                 <Col span={6}>
-                  <Card size="small" style={{ textAlign: 'center' }}>
+                  <Card 
+                    size="small" 
+                    style={{ textAlign: 'center', cursor: 'pointer' }}
+                    hoverable
+                    onClick={() => {
+                      setActiveTabKey('all');
+                      setSelectedSeverities(['LOW']);
+                    }}
+                  >
                     <Statistic
                       title="Low"
                       value={analysis.resultSummary?.lowFindings}
@@ -432,6 +638,41 @@ export default function AnalysisResults() {
         </Row>
       ),
     },
+    // 全ての検出事項を表示するタブを追加
+    {
+      key: 'all',
+      label: (
+        <Space>
+          全て
+          <Badge count={findings.length} style={{ backgroundColor: '#722ed1' }} />
+        </Space>
+      ),
+      children: (
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          {getSeverityFilterComponent()}
+          <Card
+            title={`全検出事項一覧 (${getFilteredFindings(findings).length})`}
+          >
+            {getFilteredFindings(findings).length > 0 ? (
+              <Table
+                columns={findingsColumns}
+                dataSource={getFilteredFindings(findings).map((finding) => ({
+                  ...finding,
+                  key: finding.id,
+                }))}
+                pagination={{ pageSize: 10 }}
+                size="middle"
+              />
+            ) : (
+              <Empty
+                description="選択した重要度の検出事項はありません。"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            )}
+          </Card>
+        </Space>
+      ),
+    },
     ...pillarTabs.map((tab) => ({
       key: tab.key,
       label: tab.label,
@@ -455,20 +696,34 @@ export default function AnalysisResults() {
                 <Progress
                   percent={getPillarScore(tab.pillar).score}
                   strokeColor={getPillarScore(tab.pillar).color}
-                  strokeWidth={12}
+                  size={12}
+                  format={(percent) => (
+                    <span
+                      style={{
+                        color: getPillarScore(tab.pillar).color,
+                        fontSize: '24px',
+                        fontWeight: '600',
+                      }}
+                    >
+                      {percent}%
+                    </span>
+                  )}
                 />
               </Col>
             </Row>
           </Card>
 
+          {/* 重要度フィルタ */}
+          {getSeverityFilterComponent()}
+
           {/* 検出事項テーブル */}
           <Card
-            title={`検出事項一覧 (${getPillarFindings(tab.pillar).length})`}
+            title={`検出事項一覧 (${getFilteredFindings(getPillarFindings(tab.pillar)).length})`}
           >
-            {getPillarFindings(tab.pillar).length > 0 ? (
+            {getFilteredFindings(getPillarFindings(tab.pillar)).length > 0 ? (
               <Table
                 columns={findingsColumns}
-                dataSource={getPillarFindings(tab.pillar).map((finding) => ({
+                dataSource={getFilteredFindings(getPillarFindings(tab.pillar)).map((finding) => ({
                   ...finding,
                   key: finding.id,
                 }))}
@@ -477,7 +732,7 @@ export default function AnalysisResults() {
               />
             ) : (
               <Empty
-                description="この柱では問題は検出されませんでした。"
+                description="選択した重要度の検出事項はありません。"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
               />
             )}
