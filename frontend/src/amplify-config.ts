@@ -5,37 +5,8 @@ import amplifyOutputs from '../amplify_outputs.json';
 // Use the imported Amplify configuration
 console.log('🚀 Loading Amplify Sandbox Configuration');
 
-// Amplify Gen 2の設定形式に合わせる
-const amplifyConfig = {
-  Auth: {
-    Cognito: {
-      userPoolId: amplifyOutputs.auth.user_pool_id,
-      userPoolClientId: amplifyOutputs.auth.user_pool_client_id,
-      identityPoolId: amplifyOutputs.auth.identity_pool_id,
-      signUpVerificationMethod: 'email',
-      loginWith: {
-        oauth: {
-          domain: amplifyOutputs.auth.oauth.domain,
-          scopes: amplifyOutputs.auth.oauth.scopes,
-          redirectSignIn: amplifyOutputs.auth.oauth.redirect_sign_in_uri,
-          redirectSignOut: amplifyOutputs.auth.oauth.redirect_sign_out_uri,
-          responseType: amplifyOutputs.auth.oauth.response_type,
-          providers: amplifyOutputs.auth.oauth.identity_providers
-        }
-      }
-    }
-  },
-  API: {
-    GraphQL: {
-      endpoint: amplifyOutputs.data.url,
-      region: amplifyOutputs.data.aws_region,
-      defaultAuthMode: 'userPool'
-    }
-  }
-};
-
-// Configure Amplify
-Amplify.configure(amplifyConfig);
+// Configure Amplify with outputs directly
+Amplify.configure(amplifyOutputs);
 
 // Create GraphQL client
 export const graphqlClient = generateClient();
@@ -58,4 +29,4 @@ Always respond in Japanese and provide specific, technical recommendations.
 };
 
 // Export configuration for use in other parts of the app
-export default amplifyConfig;
+export default amplifyOutputs;

@@ -6,6 +6,7 @@ import {
 import { useEffect, useState } from 'react';
 
 interface UserProfile extends AuthUser {
+  id?: string;
   tenantId?: string;
   role?: string;
   firstName?: string;
@@ -37,6 +38,7 @@ export function useAuth() {
 
       setUser({
         ...currentUser,
+        id: currentUser.userId, // Use userId as id
         tenantId: defaultTenantId,
         role: defaultRole,
         firstName: firstName || 'Demo',

@@ -98,6 +98,32 @@ export const projectQueries = {
       ErrorHandler.handle(error, 'createProject');
       return { data: null, errors: [error] };
     }
+  },
+
+  updateProject: async (id: string, input: any) => {
+    try {
+      const result = await client.graphql({
+        query: mutations.updateProject,
+        variables: { input: { id, ...input } }
+      });
+      return { data: result.data.updateProject, errors: [] };
+    } catch (error) {
+      ErrorHandler.handle(error, 'updateProject');
+      return { data: null, errors: [error] };
+    }
+  },
+
+  deleteProject: async (id: string) => {
+    try {
+      const result = await client.graphql({
+        query: mutations.deleteProject,
+        variables: { input: { id } }
+      });
+      return { data: result.data.deleteProject, errors: [] };
+    } catch (error) {
+      ErrorHandler.handle(error, 'deleteProject');
+      return { data: null, errors: [error] };
+    }
   }
 };
 

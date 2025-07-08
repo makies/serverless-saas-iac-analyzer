@@ -14,11 +14,15 @@
     "@aws-sdk/util-dynamodb": "^3.839.0",
     "@middy/core": "^6.3.2",
     "@types/node": "^24.0.7",
+    "adm-zip": "^0.5.16",
     "constructs": "^10.0.0",
     "exceljs": "^4.4.0",
+    "js-yaml": "^4.1.0",
     "puppeteer-core": "^24.11.1"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/js-yaml": "^4.0.9",
     "typescript": "^5.3.3"
   }
 }

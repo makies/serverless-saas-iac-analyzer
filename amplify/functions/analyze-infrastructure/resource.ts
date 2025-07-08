@@ -32,7 +32,7 @@ export const analyzeInfrastructure = defineFunction({
 
     // AI Services
     BEDROCK_REGION: process.env.BEDROCK_REGION || 'us-east-1',
-    BEDROCK_MODEL_ID: process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+    BEDROCK_MODEL_ID: process.env.BEDROCK_MODEL_ID || 'anthropic.claude-4-sonnet-20250514:0',
 
     // API Configuration
     GRAPHQL_API_ENDPOINT: process.env.GRAPHQL_API_ENDPOINT || '',
@@ -59,6 +59,15 @@ export const analyzeInfrastructure = defineFunction({
       'PERFORMANCE_EFFICIENCY',
       'COST_OPTIMIZATION',
       'SUSTAINABILITY'
+    ]),
+
+    // Advanced Analysis Frameworks (configurable per tenant)
+    ANALYSIS_FRAMEWORKS: JSON.stringify([
+      'WELL_ARCHITECTED',
+      'WELL_ARCHITECTED_SERVERLESS',
+      'WELL_ARCHITECTED_SAAS',
+      'AWS_SDP',
+      'AWS_SECURITY_HUB'
     ]),
 
     // Analysis limits (Basic Tier)

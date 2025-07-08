@@ -155,11 +155,15 @@ Format the response as JSON with the same structure as resource analysis.
   private async invokeBedrockModel(prompt: string): Promise<string> {
     const payload = {
       anthropic_version: "bedrock-2023-05-31",
-      max_tokens: 4000,
+      max_tokens: 8000, // Increased for Claude 4 Sonnet's enhanced capabilities
       messages: [
         {
           role: "user",
-          content: prompt,
+          content: `${prompt}
+
+IMPORTANT: You are Claude 4 Sonnet, the most advanced AWS Well-Architected Framework analysis AI. 
+Provide comprehensive, detailed analysis with specific AWS service recommendations and implementation guidance.
+Focus on actionable insights and real-world best practices.`,
         },
       ],
       temperature: 0.1,

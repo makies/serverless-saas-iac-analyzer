@@ -204,7 +204,8 @@ const schema = a.schema({
     .authorization((allow) => [
       allow.groups(['SystemAdmins']).to(['create', 'read', 'update', 'delete']),
       allow.groups(['ClientAdmins']).to(['read', 'update']),
-      allow.owner().to(['read', 'update']),
+      // Use cognitoId for owner-based access instead of generic owner field
+      allow.ownerDefinedIn('cognitoId').to(['read', 'update']),
     ])
     .secondaryIndexes((index) => [
       index('tenantId').sortKeys(['createdAt']).name('byTenant'),

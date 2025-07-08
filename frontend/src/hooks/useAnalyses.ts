@@ -48,6 +48,7 @@ export function useAnalyses(projectId?: string) {
   }, [projectId, loadAnalyses]);
 
   const createAnalysis = async (input: {
+    name: string;
     type: 'IAC_ANALYSIS' | 'LIVE_SCAN' | 'SECURITY_REVIEW' | 'COMPLIANCE_CHECK';
     sourceType: 'CLOUDFORMATION' | 'TERRAFORM' | 'CDK' | 'LIVE_ACCOUNT';
     sourceLocation: string;
@@ -61,7 +62,8 @@ export function useAnalyses(projectId?: string) {
         ...input,
         projectId,
         tenantId: user.tenantId,
-      });
+        createdBy: user.id!,
+      } as any);
 
       if (response.data && response.data !== null) {
         setAnalyses((prev) => [...prev, response.data as unknown as Analysis]);

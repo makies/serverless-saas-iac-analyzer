@@ -53,6 +53,8 @@ export function useProjects() {
       const response = await projectQueries.createProject({
         ...input,
         tenantId: user.tenantId,
+        createdBy: user.id!,
+        memberIds: [user.id!], // Add the creator as the first member
       });
 
       if (response.data && response.data !== null) {

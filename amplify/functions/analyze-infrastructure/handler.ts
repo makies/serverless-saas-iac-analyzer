@@ -14,6 +14,7 @@ import type { AnalyzeInfrastructureArgs, AnalyzeInfrastructureResult } from './r
 import { TenantContext } from '../../shared/utils/tenant-context';
 import { InfrastructureAnalyzer } from '../../shared/services/infrastructure-analyzer';
 import { WellArchitectedAnalyzer } from '../../shared/services/well-architected-analyzer';
+import { AdvancedAnalysisEngine, type AnalysisFramework } from '../../shared/services/advanced-analysis-engine';
 import { FindingsProcessor } from '../../shared/services/findings-processor';
 
 // Initialize PowerTools
@@ -78,7 +79,19 @@ const lambdaHandler: Handler<AnalyzeInfrastructureArgs, AnalyzeInfrastructureRes
     const wellArchitectedAnalyzer = new WellArchitectedAnalyzer({
       bedrockClient,
       modelId: process.env.BEDROCK_MODEL_ID!,
-      logger,
+      logger: logger as any,
+    });
+
+    // Initialize advanced analysis engine with multiple frameworks
+    const analysisFrameworks: AnalysisFramework[] = JSON.parse(
+      process.env.ANALYSIS_FRAMEWORKS || '["WELL_ARCHITECTED"]'
+    );
+    
+    const advancedAnalysisEngine = new AdvancedAnalysisEngine({
+      bedrockClient,
+      modelId: process.env.BEDROCK_MODEL_ID!,
+      logger: logger as any,
+      frameworks: analysisFrameworks,
     });
 
     const findingsProcessor = new FindingsProcessor({
@@ -99,22 +112,28 @@ const lambdaHandler: Handler<AnalyzeInfrastructureArgs, AnalyzeInfrastructureRes
       const infraData = await infrastructureAnalyzer.processFile(fileKey, analysisType);
       totalResources += infraData.resources.length;
 
-      // Perform Well-Architected analysis
-      const findings = await wellArchitectedAnalyzer.analyze(infraData, analysisType);
+      // Perform advanced multi-framework analysis
+      const advancedFindings = await advancedAnalysisEngine.analyzeInfrastructure(infraData, analysisType);
+      
+      // Also perform basic Well-Architected analysis for comparison
+      const basicFindings = await wellArchitectedAnalyzer.analyze(infraData, analysisType);
+      
+      // Combine all findings
+      const allFindings = [...advancedFindings, ...basicFindings];
       
       // Process and store findings
-      await findingsProcessor.storeFindings(analysisId, findings);
-      totalFindings += findings.length;
+      await findingsProcessor.storeFindings(analysisId, allFindings);
+      totalFindings += allFindings.length;
 
       analysisResults.push({
         file: fileKey,
         resourceCount: infraData.resources.length,
-        findingCount: findings.length,
+        findingCount: allFindings.length,
       });
 
       // Add metrics
       metrics.addMetric('ResourcesProcessed', MetricUnit.Count, infraData.resources.length);
-      metrics.addMetric('FindingsGenerated', MetricUnit.Count, findings.length);
+      metrics.addMetric('FindingsGenerated', MetricUnit.Count, allFindings.length);
     }
 
     // Generate summary statistics
