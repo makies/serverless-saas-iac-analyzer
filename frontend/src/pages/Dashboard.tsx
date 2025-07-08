@@ -7,6 +7,7 @@ import {
   PlusOutlined,
   RightOutlined,
   SafetyOutlined,
+  SearchOutlined,
   SettingOutlined,
   TeamOutlined,
   TrophyOutlined,
@@ -18,9 +19,11 @@ import {
   Card,
   Col,
   Descriptions,
+  Input,
   Layout,
   Progress,
   Row,
+  Select,
   Space,
   Statistic,
   Table,
@@ -45,6 +48,11 @@ export default function Dashboard() {
   const [analyses, setAnalyses] = useState<any[]>([]);
   const [tenants, setTenants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // プロジェクト検索・フィルタ用のstate
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('name');
 
   useEffect(() => {
     loadDashboardData();
@@ -135,23 +143,66 @@ export default function Dashboard() {
       .reduce((sum, a) => sum + (a.resultSummary?.overallScore || 0), 0) /
     Math.max(analyses.filter((a) => a.resultSummary).length, 1) : 0;
 
-  // プロジェクトテーブル用データ
-  const projectTableData = projects.map((project) => {
-    const projectAnalyses = getProjectAnalyses(project.id);
-    const latestAnalysis = projectAnalyses.length > 0 ? 
-      projectAnalyses.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] : null;
+  // プロジェクトテーブル用データ（フィルタリング・検索・ソート済み）
+  const getFilteredAndSortedProjects = () => {
+    let filteredProjects = projects.map((project) => {
+      const projectAnalyses = getProjectAnalyses(project.id);
+      const latestAnalysis = projectAnalyses.length > 0 ? 
+        projectAnalyses.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] : null;
 
-    return {
-      key: project.id,
-      name: project.name,
-      description: project.description,
-      status: project.status,
-      memberCount: project.memberIds?.length || 0,
-      analysisCount: projectAnalyses.length,
-      lastAnalysis: latestAnalysis?.createdAt,
-      latestScore: latestAnalysis?.resultSummary?.overallScore,
-    };
-  });
+      return {
+        key: project.id,
+        name: project.name,
+        description: project.description,
+        status: project.status,
+        memberCount: project.memberIds?.length || 0,
+        analysisCount: projectAnalyses.length,
+        lastAnalysis: latestAnalysis?.createdAt,
+        latestScore: latestAnalysis?.resultSummary?.overallScore,
+        createdAt: project.createdAt,
+      };
+    });
+
+    // 検索文字列でフィルタリング
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filteredProjects = filteredProjects.filter(project => 
+        project.name.toLowerCase().includes(searchLower) ||
+        (project.description || '').toLowerCase().includes(searchLower)
+      );
+    }
+
+    // ステータスでフィルタリング
+    if (statusFilter !== 'all') {
+      filteredProjects = filteredProjects.filter(project => 
+        project.status === statusFilter
+      );
+    }
+
+    // ソート
+    filteredProjects.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'latest_score':
+          return (b.latestScore || 0) - (a.latestScore || 0);
+        case 'analysis_count':
+          return b.analysisCount - a.analysisCount;
+        case 'last_analysis':
+          const aDate = a.lastAnalysis ? new Date(a.lastAnalysis).getTime() : 0;
+          const bDate = b.lastAnalysis ? new Date(b.lastAnalysis).getTime() : 0;
+          return bDate - aDate;
+        case 'created_at':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    return filteredProjects;
+  };
+
+  const projectTableData = getFilteredAndSortedProjects();
 
   const projectColumns = [
     {
@@ -387,7 +438,7 @@ export default function Dashboard() {
             title={
               <Space>
                 <AppstoreOutlined />
-                <span>プロジェクト一覧 ({projects.length})</span>
+                <span>プロジェクト一覧 ({projectTableData.length} / {projects.length})</span>
               </Space>
             }
             extra={
@@ -400,11 +451,68 @@ export default function Dashboard() {
               </Button>
             }
           >
+            {/* 検索・フィルタ・ソートコントロール */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '16px' }}>
+              <Col span={8}>
+                <Input
+                  placeholder="プロジェクト名や説明で検索..."
+                  prefix={<SearchOutlined />}
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  allowClear
+                />
+              </Col>
+              <Col span={6}>
+                <Select
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  style={{ width: '100%' }}
+                  placeholder="ステータスで絞り込み"
+                >
+                  <Select.Option value="all">すべてのステータス</Select.Option>
+                  <Select.Option value="ACTIVE">アクティブ</Select.Option>
+                  <Select.Option value="INACTIVE">非アクティブ</Select.Option>
+                  <Select.Option value="ARCHIVED">アーカイブ済み</Select.Option>
+                </Select>
+              </Col>
+              <Col span={6}>
+                <Select
+                  value={sortBy}
+                  onChange={setSortBy}
+                  style={{ width: '100%' }}
+                  placeholder="並び順"
+                >
+                  <Select.Option value="name">名前順</Select.Option>
+                  <Select.Option value="latest_score">最新スコア順</Select.Option>
+                  <Select.Option value="analysis_count">分析数順</Select.Option>
+                  <Select.Option value="last_analysis">最終更新順</Select.Option>
+                  <Select.Option value="created_at">作成日順</Select.Option>
+                </Select>
+              </Col>
+              <Col span={4}>
+                <Button
+                  onClick={() => {
+                    setSearchText('');
+                    setStatusFilter('all');
+                    setSortBy('name');
+                  }}
+                  style={{ width: '100%' }}
+                >
+                  リセット
+                </Button>
+              </Col>
+            </Row>
+
             <Table
               columns={projectColumns}
               dataSource={projectTableData}
               pagination={false}
               size="middle"
+              locale={{
+                emptyText: projectTableData.length === 0 && (searchText || statusFilter !== 'all') 
+                  ? '検索条件に一致するプロジェクトが見つかりません' 
+                  : 'プロジェクトがありません'
+              }}
             />
           </Card>
         </Col>
