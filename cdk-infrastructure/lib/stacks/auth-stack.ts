@@ -1,6 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import { EnvironmentConfig } from '../config/environments';
 import { USER_ROLES } from '../config/constants';
@@ -124,9 +126,9 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
     });
 
     // Lambda functions for Cognito triggers
-    const cognitoTriggersFunction = new cdk.aws_lambda_nodejs.NodejsFunction(this, 'CognitoTriggersFunction', {
-      runtime: cdk.aws_lambda.Runtime.NODEJS_22_X,
-      handler: 'preAuthentication',
+    const cognitoTriggersFunction = new lambdaNodejs.NodejsFunction(this, 'CognitoTriggersFunction', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'handler',
       entry: require('path').join(__dirname, '../src/functions/cognito-triggers.ts'),
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
@@ -138,7 +140,7 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
         EVENT_BUS_NAME: `CloudBPA-SBT-Events-${config.environment}`,
         LOG_LEVEL: config.lambdaConfig.logLevel,
       },
-      tracing: cdk.aws_lambda.Tracing.ACTIVE,
+      tracing: lambda.Tracing.ACTIVE,
       functionName: `CloudBPA-CognitoTriggers-${config.environment}`,
     });
 
@@ -168,105 +170,14 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
       })
     );
 
-    // User Pool with Lambda triggers
-    this.userPool = new cognito.UserPool(this, 'UserPool', {
-      userPoolName: `${config.cognitoConfig.userPoolName}-${config.environment}`,
-      signInAliases: {
-        email: true,
-        username: true,
-      },
-      signInCaseSensitive: false,
-      standardAttributes: {
-        email: {
-          required: true,
-          mutable: true,
-        },
-        givenName: {
-          required: true,
-          mutable: true,
-        },
-        familyName: {
-          required: true,
-          mutable: true,
-        },
-      },
-      customAttributes: {
-        tenantId: new cognito.StringAttribute({
-          minLen: 1,
-          maxLen: 50,
-          mutable: true,
-        }),
-        role: new cognito.StringAttribute({
-          minLen: 1,
-          maxLen: 50,
-          mutable: true,
-        }),
-        projectIds: new cognito.StringAttribute({
-          minLen: 0,
-          maxLen: 2000,
-          mutable: true,
-        }),
-      },
-      passwordPolicy: {
-        minLength: 12,
-        requireLowercase: true,
-        requireUppercase: true,
-        requireDigits: true,
-        requireSymbols: true,
-        tempPasswordValidity: cdk.Duration.days(7),
-      },
-      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
-      selfSignUpEnabled: false, // 招待制
-      userInvitation: {
-        emailBody: `こんにちは,
-
-${config.cognitoConfig.userPoolName}にご招待いたします。
-
-ユーザー名: {username}
-一時パスワード: {####}
-
-初回ログイン後にパスワードを変更してください。
-
-アプリケーション URL: ${config.cognitoConfig.allowedOrigins[0]}
-
-ご質問がございましたら、システム管理者までお問い合わせください。`,
-        emailSubject: `${config.cognitoConfig.userPoolName}への招待`,
-        smsMessage: `${config.cognitoConfig.userPoolName}への招待 - ユーザー名: {username}, 一時パスワード: {####}`,
-      },
-      autoVerify: {
-        email: true,
-      },
-      userVerification: {
-        emailSubject: `${config.cognitoConfig.userPoolName} - メールアドレスの確認`,
-        emailBody: `
-メールアドレスの確認コード: {####}
-
-このコードを入力してメールアドレスを確認してください。
-        `,
-        emailStyle: cognito.VerificationEmailStyle.CODE,
-      },
-      deviceTracking: {
-        challengeRequiredOnNewDevice: true,
-        deviceOnlyRememberedOnUserPrompt: true,
-      },
-      mfa: cognito.Mfa.OPTIONAL,
-      mfaSecondFactor: {
-        sms: true,
-        otp: true,
-      },
-      lambdaTriggers: {
-        preAuthentication: cognitoTriggersFunction,
-        postAuthentication: cognitoTriggersFunction,
-        preTokenGeneration: cognitoTriggersFunction,
-        postConfirmation: cognitoTriggersFunction,
-        defineAuthChallenge: cognitoTriggersFunction,
-        createAuthChallenge: cognitoTriggersFunction,
-        verifyAuthChallengeResponse: cognitoTriggersFunction,
-      },
-      deletionProtection: config.environment === 'prod',
-      removalPolicy:
-        config.environment === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
-    });
+    // Add Lambda triggers to the existing User Pool
+    this.userPool.addTrigger(cognito.UserPoolOperation.PRE_AUTHENTICATION, cognitoTriggersFunction);
+    this.userPool.addTrigger(cognito.UserPoolOperation.POST_AUTHENTICATION, cognitoTriggersFunction);
+    this.userPool.addTrigger(cognito.UserPoolOperation.PRE_TOKEN_GENERATION, cognitoTriggersFunction);
+    this.userPool.addTrigger(cognito.UserPoolOperation.POST_CONFIRMATION, cognitoTriggersFunction);
+    this.userPool.addTrigger(cognito.UserPoolOperation.DEFINE_AUTH_CHALLENGE, cognitoTriggersFunction);
+    this.userPool.addTrigger(cognito.UserPoolOperation.CREATE_AUTH_CHALLENGE, cognitoTriggersFunction);
+    this.userPool.addTrigger(cognito.UserPoolOperation.VERIFY_AUTH_CHALLENGE_RESPONSE, cognitoTriggersFunction);
 
     // User Pool Client
     this.userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {

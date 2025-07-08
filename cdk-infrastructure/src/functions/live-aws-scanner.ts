@@ -7,12 +7,15 @@
 import { EventBridgeHandler } from 'aws-lambda';
 import { STSClient, AssumeRoleCommand } from '@aws-sdk/client-sts';
 import { ConfigServiceClient, SelectResourceConfigCommand } from '@aws-sdk/client-config-service';
-import { EC2Client, DescribeInstancesCommand, DescribeSecurityGroupsCommand, DescribeVpcsCommand } from '@aws-sdk/client-ec2';
+import { ECSClient, ListClustersCommand, DescribeClustersCommand, ListServicesCommand, DescribeServicesCommand, ListTaskDefinitionsCommand, DescribeTaskDefinitionCommand } from '@aws-sdk/client-ecs';
+import { EC2Client, DescribeSecurityGroupsCommand, DescribeVpcsCommand, DescribeSubnetsCommand } from '@aws-sdk/client-ec2';
 import { S3Client, ListBucketsCommand, GetBucketEncryptionCommand, GetBucketPolicyCommand } from '@aws-sdk/client-s3';
 import { LambdaClient, ListFunctionsCommand, GetFunctionCommand } from '@aws-sdk/client-lambda';
 import { RDSClient, DescribeDBInstancesCommand, DescribeDBClustersCommand } from '@aws-sdk/client-rds';
 import { CloudFormationClient, ListStacksCommand, DescribeStacksCommand } from '@aws-sdk/client-cloudformation';
 import { IAMClient, ListRolesCommand, ListPoliciesCommand, GetRoleCommand } from '@aws-sdk/client-iam';
+import { OrganizationsClient, DescribeOrganizationCommand, DescribeAccountCommand, ListAccountsCommand, ListRootsCommand, ListOrganizationalUnitsForParentCommand, ListPoliciesCommand as ListOrgPoliciesCommand, DescribePolicyCommand } from '@aws-sdk/client-organizations';
+import { SupportClient, DescribeSeverityLevelsCommand, DescribeTrustedAdvisorChecksCommand, DescribeCasesCommand } from '@aws-sdk/client-support';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
@@ -21,9 +24,9 @@ import { Tracer } from '@aws-lambda-powertools/tracer';
 import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
 
 // PowerTools setup
-const logger = new Logger({ serviceName: 'live-aws-scanner' });
-const tracer = new Tracer({ serviceName: 'live-aws-scanner' });
-const metrics = new Metrics({ serviceName: 'live-aws-scanner', namespace: 'CloudBPA/LiveScan' });
+const logger = new Logger({ serviceName: 'cloud-bpa' });
+const tracer = new Tracer({ serviceName: 'cloud-bpa' });
+const metrics = new Metrics({ serviceName: 'cloud-bpa', namespace: 'CloudBPA/LiveScan' });
 
 // AWS Clients
 const stsClient = new STSClient({});
@@ -236,9 +239,9 @@ async function scanServiceInRegion(
 
   try {
     switch (service.toLowerCase()) {
-      case 'ec2':
-        const ec2Resources = await scanEC2(region, credentials, resourceTypes);
-        resources.push(...ec2Resources);
+      case 'ecs':
+        const ecsResources = await scanECS(region, credentials, resourceTypes);
+        resources.push(...ecsResources);
         break;
 
       case 's3':
@@ -277,6 +280,27 @@ async function scanServiceInRegion(
         resources.push(...configResources);
         break;
 
+      case 'organizations':
+        // Organizations is global but we'll scan from the specified region
+        if (region === 'us-east-1') { // Only scan Organizations from us-east-1 to avoid duplicates
+          const orgResources = await scanOrganizations(credentials, resourceTypes);
+          resources.push(...orgResources);
+        }
+        break;
+
+      case 'support':
+        // Support is global but we'll scan from the specified region
+        if (region === 'us-east-1') { // Only scan Support from us-east-1 to avoid duplicates
+          const supportResources = await scanSupport(credentials, resourceTypes);
+          resources.push(...supportResources);
+        }
+        break;
+
+      case 'ec2':
+        // Moved to Phase 2 - keeping for future reference
+        logger.info('EC2 scanning moved to Phase 2', { service });
+        break;
+
       default:
         logger.warn('Unsupported service for scanning', { service });
     }
@@ -299,52 +323,169 @@ async function scanServiceInRegion(
   };
 }
 
-async function scanEC2(region: string, credentials: any, resourceTypes?: string[]): Promise<any[]> {
-  const ec2Client = new EC2Client({ region, credentials });
+async function scanECS(region: string, credentials: any, resourceTypes?: string[]): Promise<any[]> {
+  const ecsClient = new ECSClient({ region, credentials });
   const resources: any[] = [];
 
-  // Scan EC2 instances
-  if (!resourceTypes || resourceTypes.includes('AWS::EC2::Instance')) {
-    const instancesResult = await ec2Client.send(new DescribeInstancesCommand({}));
-    instancesResult.Reservations?.forEach(reservation => {
-      reservation.Instances?.forEach(instance => {
+  // Scan ECS Clusters
+  if (!resourceTypes || resourceTypes.includes('AWS::ECS::Cluster')) {
+    const clustersResult = await ecsClient.send(new ListClustersCommand({}));
+    
+    if (clustersResult.clusterArns && clustersResult.clusterArns.length > 0) {
+      const clusterDetails = await ecsClient.send(new DescribeClustersCommand({
+        clusters: clustersResult.clusterArns,
+        include: ['CONFIGURATIONS', 'TAGS', 'CAPACITY_PROVIDERS', 'INSIGHTS']
+      }));
+
+      clusterDetails.clusters?.forEach(cluster => {
         resources.push({
-          resourceType: 'AWS::EC2::Instance',
-          resourceId: instance.InstanceId,
-          resourceName: instance.Tags?.find(tag => tag.Key === 'Name')?.Value,
-          configuration: instance,
+          resourceType: 'AWS::ECS::Cluster',
+          resourceId: cluster.clusterArn,
+          resourceName: cluster.clusterName,
+          configuration: {
+            ...cluster,
+            insights: cluster.configuration?.executeCommandConfiguration,
+            capacityProviders: cluster.capacityProviders,
+            defaultCapacityProviderStrategy: cluster.defaultCapacityProviderStrategy,
+          },
           region,
         });
       });
-    });
+    }
   }
 
-  // Scan Security Groups
-  if (!resourceTypes || resourceTypes.includes('AWS::EC2::SecurityGroup')) {
-    const sgResult = await ec2Client.send(new DescribeSecurityGroupsCommand({}));
-    sgResult.SecurityGroups?.forEach(sg => {
-      resources.push({
-        resourceType: 'AWS::EC2::SecurityGroup',
-        resourceId: sg.GroupId,
-        resourceName: sg.GroupName,
-        configuration: sg,
-        region,
-      });
-    });
+  // Scan ECS Services
+  if (!resourceTypes || resourceTypes.includes('AWS::ECS::Service')) {
+    const clustersResult = await ecsClient.send(new ListClustersCommand({}));
+    
+    if (clustersResult.clusterArns) {
+      for (const clusterArn of clustersResult.clusterArns) {
+        try {
+          const servicesResult = await ecsClient.send(new ListServicesCommand({
+            cluster: clusterArn,
+          }));
+
+          if (servicesResult.serviceArns && servicesResult.serviceArns.length > 0) {
+            const serviceDetails = await ecsClient.send(new DescribeServicesCommand({
+              cluster: clusterArn,
+              services: servicesResult.serviceArns,
+              include: ['TAGS']
+            }));
+
+            serviceDetails.services?.forEach(service => {
+              resources.push({
+                resourceType: 'AWS::ECS::Service',
+                resourceId: service.serviceArn,
+                resourceName: service.serviceName,
+                configuration: {
+                  ...service,
+                  cluster: clusterArn,
+                  taskDefinition: service.taskDefinition,
+                  desiredCount: service.desiredCount,
+                  runningCount: service.runningCount,
+                  pendingCount: service.pendingCount,
+                  launchType: service.launchType,
+                  platformVersion: service.platformVersion,
+                  networkConfiguration: service.networkConfiguration,
+                  loadBalancers: service.loadBalancers,
+                  serviceRegistries: service.serviceRegistries,
+                  autoScaling: service.deploymentConfiguration,
+                },
+                region,
+              });
+            });
+          }
+        } catch (error) {
+          logger.warn('Failed to scan services for cluster', { clusterArn, error });
+        }
+      }
+    }
   }
 
-  // Scan VPCs
-  if (!resourceTypes || resourceTypes.includes('AWS::EC2::VPC')) {
-    const vpcResult = await ec2Client.send(new DescribeVpcsCommand({}));
-    vpcResult.Vpcs?.forEach(vpc => {
-      resources.push({
-        resourceType: 'AWS::EC2::VPC',
-        resourceId: vpc.VpcId,
-        resourceName: vpc.Tags?.find(tag => tag.Key === 'Name')?.Value,
-        configuration: vpc,
-        region,
-      });
-    });
+  // Scan Task Definitions
+  if (!resourceTypes || resourceTypes.includes('AWS::ECS::TaskDefinition')) {
+    const taskDefinitionsResult = await ecsClient.send(new ListTaskDefinitionsCommand({
+      status: 'ACTIVE',
+      maxResults: 100, // Limit to avoid overwhelming
+    }));
+
+    if (taskDefinitionsResult.taskDefinitionArns) {
+      for (const taskDefArn of taskDefinitionsResult.taskDefinitionArns) {
+        try {
+          const taskDefDetails = await ecsClient.send(new DescribeTaskDefinitionCommand({
+            taskDefinition: taskDefArn,
+            include: ['TAGS']
+          }));
+
+          if (taskDefDetails.taskDefinition) {
+            const taskDef = taskDefDetails.taskDefinition;
+            resources.push({
+              resourceType: 'AWS::ECS::TaskDefinition',
+              resourceId: taskDef.taskDefinitionArn,
+              resourceName: `${taskDef.family}:${taskDef.revision}`,
+              configuration: {
+                ...taskDef,
+                security: {
+                  executionRoleArn: taskDef.executionRoleArn,
+                  taskRoleArn: taskDef.taskRoleArn,
+                  networkMode: taskDef.networkMode,
+                  requiresCompatibilities: taskDef.requiresCompatibilities,
+                },
+                resources: {
+                  cpu: taskDef.cpu,
+                  memory: taskDef.memory,
+                },
+                containerDefinitions: taskDef.containerDefinitions?.map(container => ({
+                  name: container.name,
+                  image: container.image,
+                  cpu: container.cpu,
+                  memory: container.memory,
+                  memoryReservation: container.memoryReservation,
+                  essential: container.essential,
+                  portMappings: container.portMappings,
+                  environment: container.environment,
+                  secrets: container.secrets,
+                  mountPoints: container.mountPoints,
+                  volumesFrom: container.volumesFrom,
+                  logConfiguration: container.logConfiguration,
+                  healthCheck: container.healthCheck,
+                  systemControls: container.systemControls,
+                  resourceRequirements: container.resourceRequirements,
+                  firelensConfiguration: container.firelensConfiguration,
+                  user: container.user,
+                  workingDirectory: container.workingDirectory,
+                  disableNetworking: container.disableNetworking,
+                  privileged: container.privileged,
+                  readonlyRootFilesystem: container.readonlyRootFilesystem,
+                  dnsServers: container.dnsServers,
+                  dnsSearchDomains: container.dnsSearchDomains,
+                  extraHosts: container.extraHosts,
+                  dockerSecurityOptions: container.dockerSecurityOptions,
+                  interactive: container.interactive,
+                  pseudoTerminal: container.pseudoTerminal,
+                  dockerLabels: container.dockerLabels,
+                  ulimits: container.ulimits,
+                  startTimeout: container.startTimeout,
+                  stopTimeout: container.stopTimeout,
+                })),
+                volumes: taskDef.volumes,
+                placementConstraints: taskDef.placementConstraints,
+                requiresAttributes: taskDef.requiresAttributes,
+                pidMode: taskDef.pidMode,
+                ipcMode: taskDef.ipcMode,
+                proxyConfiguration: taskDef.proxyConfiguration,
+                inferenceAccelerators: taskDef.inferenceAccelerators,
+                ephemeralStorage: taskDef.ephemeralStorage,
+                runtimePlatform: taskDef.runtimePlatform,
+              },
+              region,
+            });
+          }
+        } catch (error) {
+          logger.warn('Failed to get task definition details', { taskDefArn, error });
+        }
+      }
+    }
   }
 
   return resources;
@@ -611,6 +752,358 @@ async function scanConfigService(region: string, credentials: any, resourceTypes
     }
   } catch (error) {
     logger.warn('AWS Config scan failed (Config may not be enabled)', { region, error });
+  }
+
+  return resources;
+}
+
+async function scanOrganizations(credentials: any, resourceTypes?: string[]): Promise<any[]> {
+  const orgClient = new OrganizationsClient({ credentials });
+  const resources: any[] = [];
+
+  try {
+    // Scan Organization information
+    if (!resourceTypes || resourceTypes.includes('AWS::Organizations::Organization')) {
+      try {
+        const orgResult = await orgClient.send(new DescribeOrganizationCommand({}));
+        
+        if (orgResult.Organization) {
+          const org = orgResult.Organization;
+          resources.push({
+            resourceType: 'AWS::Organizations::Organization',
+            resourceId: org.Id,
+            resourceName: 'Organization',
+            configuration: {
+              ...org,
+              featureSet: org.FeatureSet,
+              masterAccountId: org.MasterAccountId,
+              masterAccountEmail: org.MasterAccountEmail,
+              availablePolicyTypes: org.AvailablePolicyTypes,
+            },
+            region: 'us-east-1', // Organizations is global
+          });
+        }
+      } catch (error) {
+        logger.warn('Failed to describe organization (account may not be in an organization)', { error });
+      }
+    }
+
+    // Scan Organization Accounts
+    if (!resourceTypes || resourceTypes.includes('AWS::Organizations::Account')) {
+      try {
+        const accountsResult = await orgClient.send(new ListAccountsCommand({}));
+        
+        if (accountsResult.Accounts) {
+          for (const account of accountsResult.Accounts) {
+            try {
+              // Get detailed account information
+              const accountDetails = await orgClient.send(new DescribeAccountCommand({
+                AccountId: account.Id,
+              }));
+
+              resources.push({
+                resourceType: 'AWS::Organizations::Account',
+                resourceId: account.Id,
+                resourceName: account.Name,
+                configuration: {
+                  ...account,
+                  details: accountDetails.Account,
+                  status: account.Status,
+                  joinedMethod: account.JoinedMethod,
+                  joinedTimestamp: account.JoinedTimestamp,
+                },
+                region: 'us-east-1', // Organizations is global
+              });
+            } catch (error) {
+              logger.warn('Failed to get account details', { accountId: account.Id, error });
+              // Add basic account info even if detailed info fails
+              resources.push({
+                resourceType: 'AWS::Organizations::Account',
+                resourceId: account.Id,
+                resourceName: account.Name,
+                configuration: account,
+                region: 'us-east-1',
+              });
+            }
+          }
+        }
+      } catch (error) {
+        logger.warn('Failed to list organization accounts', { error });
+      }
+    }
+
+    // Scan Organizational Units
+    if (!resourceTypes || resourceTypes.includes('AWS::Organizations::OrganizationalUnit')) {
+      try {
+        const rootsResult = await orgClient.send(new ListRootsCommand({}));
+        
+        if (rootsResult.Roots) {
+          for (const root of rootsResult.Roots) {
+            // Add root as a resource
+            resources.push({
+              resourceType: 'AWS::Organizations::Root',
+              resourceId: root.Id,
+              resourceName: root.Name,
+              configuration: {
+                ...root,
+                type: 'ROOT',
+                policyTypes: root.PolicyTypes,
+              },
+              region: 'us-east-1',
+            });
+
+            // Recursively scan OUs under this root
+            await scanOrganizationalUnits(orgClient, root.Id!, resources);
+          }
+        }
+      } catch (error) {
+        logger.warn('Failed to list organization roots', { error });
+      }
+    }
+
+    // Scan Service Control Policies
+    if (!resourceTypes || resourceTypes.includes('AWS::Organizations::Policy')) {
+      try {
+        const policiesResult = await orgClient.send(new ListOrgPoliciesCommand({
+          Filter: 'SERVICE_CONTROL_POLICY',
+        }));
+        
+        if (policiesResult.Policies) {
+          for (const policy of policiesResult.Policies) {
+            try {
+              const policyDetails = await orgClient.send(new DescribePolicyCommand({
+                PolicyId: policy.Id,
+              }));
+
+              resources.push({
+                resourceType: 'AWS::Organizations::Policy',
+                resourceId: policy.Id,
+                resourceName: policy.Name,
+                configuration: {
+                  ...policy,
+                  details: policyDetails.Policy,
+                  content: policyDetails.Policy?.Content,
+                  type: policy.Type,
+                  awsManaged: policy.AwsManaged,
+                },
+                region: 'us-east-1',
+              });
+            } catch (error) {
+              logger.warn('Failed to get policy details', { policyId: policy.Id, error });
+            }
+          }
+        }
+      } catch (error) {
+        logger.warn('Failed to list organization policies', { error });
+      }
+    }
+
+  } catch (error) {
+    logger.error('Organizations scan failed', { error });
+  }
+
+  return resources;
+}
+
+async function scanOrganizationalUnits(orgClient: OrganizationsClient, parentId: string, resources: any[]): Promise<void> {
+  try {
+    const ousResult = await orgClient.send(new ListOrganizationalUnitsForParentCommand({
+      ParentId: parentId,
+    }));
+
+    if (ousResult.OrganizationalUnits) {
+      for (const ou of ousResult.OrganizationalUnits) {
+        resources.push({
+          resourceType: 'AWS::Organizations::OrganizationalUnit',
+          resourceId: ou.Id,
+          resourceName: ou.Name,
+          configuration: {
+            ...ou,
+            parentId,
+            type: 'ORGANIZATIONAL_UNIT',
+          },
+          region: 'us-east-1',
+        });
+
+        // Recursively scan child OUs
+        if (ou.Id) {
+          await scanOrganizationalUnits(orgClient, ou.Id, resources);
+        }
+      }
+    }
+  } catch (error) {
+    logger.warn('Failed to list organizational units', { parentId, error });
+  }
+}
+
+async function scanSupport(credentials: any, resourceTypes?: string[]): Promise<any[]> {
+  const supportClient = new SupportClient({ credentials });
+  const resources: any[] = [];
+
+  try {
+    // Scan Support Plan information by checking access to premium features
+    if (!resourceTypes || resourceTypes.includes('AWS::Support::Plan')) {
+      try {
+        // Try to access Trusted Advisor checks - only available with Business/Enterprise support
+        const checksResult = await supportClient.send(new DescribeTrustedAdvisorChecksCommand({
+          language: 'en',
+        }));
+        
+        if (checksResult.checks && checksResult.checks.length > 0) {
+          // Business or Enterprise support plan detected
+          let supportLevel = 'Business';
+          
+          // Check for Enterprise-specific features by testing severity levels
+          try {
+            const severityResult = await supportClient.send(new DescribeSeverityLevelsCommand({
+              language: 'en',
+            }));
+            
+            // Enterprise plans typically have more severity levels and faster response times
+            if (severityResult.severityLevels && severityResult.severityLevels.length >= 4) {
+              const hasEnterprise = severityResult.severityLevels.some(level => 
+                level.name?.toLowerCase().includes('critical') && 
+                level.name?.toLowerCase().includes('urgent')
+              );
+              if (hasEnterprise) {
+                supportLevel = 'Enterprise';
+              }
+            }
+          } catch (severityError) {
+            // If we can't get severity levels, stick with Business plan detection
+            logger.debug('Could not determine enterprise features', { error: severityError });
+          }
+
+          resources.push({
+            resourceType: 'AWS::Support::Plan',
+            resourceId: 'support-plan',
+            resourceName: `${supportLevel} Support Plan`,
+            configuration: {
+              planName: supportLevel,
+              planType: supportLevel.toUpperCase(),
+              trustedAdvisorAccess: true,
+              caseManagementAccess: true,
+              checksAvailable: checksResult.checks.length,
+              features: {
+                trustedAdvisor: true,
+                caseManagement: true,
+                phoneSupport: supportLevel === 'Enterprise',
+                chatSupport: true,
+                architecturalGuidance: supportLevel === 'Enterprise',
+                infrastructureEventManagement: supportLevel === 'Enterprise',
+              },
+            },
+            region: 'us-east-1', // Support is global
+          });
+
+          // Get some sample Trusted Advisor check status for additional context
+          try {
+            const sampleChecks = checksResult.checks.slice(0, 5); // Get first 5 checks
+            for (const check of sampleChecks) {
+              // Note: We're not calling DescribeTrustedAdvisorCheckResult to avoid permissions issues
+              // Just documenting that the check exists
+              resources.push({
+                resourceType: 'AWS::Support::TrustedAdvisorCheck',
+                resourceId: check.id,
+                resourceName: check.name,
+                configuration: {
+                  ...check,
+                  category: check.category,
+                  description: check.description,
+                  metadata: check.metadata,
+                },
+                region: 'us-east-1',
+              });
+            }
+          } catch (checkError) {
+            logger.debug('Could not retrieve Trusted Advisor check details', { error: checkError });
+          }
+        }
+      } catch (trustedAdvisorError) {
+        // If Trusted Advisor is not accessible, likely Basic or Developer support
+        logger.debug('Trusted Advisor not accessible, checking for basic support', { error: trustedAdvisorError });
+        
+        try {
+          // Try to create a test case to determine support level
+          // Note: We won't actually create a case, just check permissions
+          const casesResult = await supportClient.send(new DescribeCasesCommand({
+            maxResults: 1,
+          }));
+          
+          // If we can list cases, at least Developer support is enabled
+          resources.push({
+            resourceType: 'AWS::Support::Plan',
+            resourceId: 'support-plan',
+            resourceName: 'Developer Support Plan',
+            configuration: {
+              planName: 'Developer',
+              planType: 'DEVELOPER',
+              trustedAdvisorAccess: false,
+              caseManagementAccess: true,
+              checksAvailable: 0,
+              features: {
+                trustedAdvisor: false,
+                caseManagement: true,
+                phoneSupport: false,
+                chatSupport: false,
+                architecturalGuidance: false,
+                infrastructureEventManagement: false,
+              },
+            },
+            region: 'us-east-1',
+          });
+        } catch (caseError) {
+          // If we can't access cases either, likely Basic support
+          resources.push({
+            resourceType: 'AWS::Support::Plan',
+            resourceId: 'support-plan',
+            resourceName: 'Basic Support Plan',
+            configuration: {
+              planName: 'Basic',
+              planType: 'BASIC',
+              trustedAdvisorAccess: false,
+              caseManagementAccess: false,
+              checksAvailable: 0,
+              features: {
+                trustedAdvisor: false,
+                caseManagement: false,
+                phoneSupport: false,
+                chatSupport: false,
+                architecturalGuidance: false,
+                infrastructureEventManagement: false,
+              },
+            },
+            region: 'us-east-1',
+          });
+        }
+      }
+    }
+
+  } catch (error) {
+    logger.error('Support scan failed', { error });
+    // Even if the scan fails, we can indicate that we couldn't determine the support plan
+    resources.push({
+      resourceType: 'AWS::Support::Plan',
+      resourceId: 'support-plan',
+      resourceName: 'Unknown Support Plan',
+      configuration: {
+        planName: 'Unknown',
+        planType: 'UNKNOWN',
+        trustedAdvisorAccess: false,
+        caseManagementAccess: false,
+        checksAvailable: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        features: {
+          trustedAdvisor: false,
+          caseManagement: false,
+          phoneSupport: false,
+          chatSupport: false,
+          architecturalGuidance: false,
+          infrastructureEventManagement: false,
+        },
+      },
+      region: 'us-east-1',
+    });
   }
 
   return resources;

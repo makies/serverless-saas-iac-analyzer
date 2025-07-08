@@ -6,6 +6,7 @@ import {
   LinkOutlined,
   PlusOutlined,
   SafetyOutlined,
+  BankOutlined,
 } from '@ant-design/icons';
 import {
   Alert,
@@ -31,6 +32,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { analysisQueries, projectQueries } from '../services/graphqlQueries';
 import { useAuth } from '../hooks/useAuth';
 import type { Finding, WellArchitectedPillar } from '../types';
+import OrganizationsView from '../components/OrganizationsView';
+import SupportView from '../components/SupportView';
 
 const { Title, Text } = Typography;
 
@@ -64,11 +67,12 @@ export default function AnalysisResults() {
       // Later this will be replaced with actual GraphQL queries
       const mockAnalysisData = {
         id: analysisId,
-        name: 'サンプル分析',
-        type: 'CLOUDFORMATION',
+        name: 'サンプルライブスキャン分析',
+        type: 'LIVE_SCAN',
         status: 'COMPLETED',
         projectId: 'project-1',
         tenantId: 'tenant-1',
+        strategy: 'LIVE_SCAN',
         inputFiles: {
           'template.yaml': 'AWSTemplateFormatVersion: "2010-09-09"...'
         },
@@ -77,13 +81,143 @@ export default function AnalysisResults() {
           accountId: '123456789012'
         },
         resultSummary: {
-          overallScore: 75,
+          overallScore: 68,
           criticalFindings: 1,
-          highFindings: 1,
-          mediumFindings: 3,
+          highFindings: 2,
+          mediumFindings: 5,
           lowFindings: 2,
-          totalFindings: 7,
+          totalFindings: 10,
           completedAt: new Date().toISOString()
+        },
+        scanResults: {
+          organizations: {
+            organization: {
+              id: 'o-example1234',
+              masterAccountId: '123456789012',
+              masterAccountEmail: 'admin@example.com',
+              featureSet: 'ALL_FEATURES',
+              arn: 'arn:aws:organizations::123456789012:organization/o-example1234'
+            },
+            accounts: [
+              {
+                id: '123456789012',
+                name: 'Master Account',
+                email: 'admin@example.com',
+                status: 'ACTIVE',
+                joinedMethod: 'INVITED',
+                joinedTimestamp: '2023-01-15T10:30:00Z'
+              },
+              {
+                id: '234567890123',
+                name: 'Production Account',
+                email: 'prod@example.com',
+                status: 'ACTIVE',
+                joinedMethod: 'CREATED',
+                joinedTimestamp: '2023-02-20T14:15:00Z'
+              },
+              {
+                id: '345678901234',
+                name: 'Development Account',
+                email: 'dev@example.com',
+                status: 'ACTIVE',
+                joinedMethod: 'CREATED',
+                joinedTimestamp: '2023-03-10T09:45:00Z'
+              },
+              {
+                id: '456789012345',
+                name: 'Staging Account',
+                email: 'staging@example.com',
+                status: 'ACTIVE',
+                joinedMethod: 'CREATED',
+                joinedTimestamp: '2023-04-05T16:20:00Z'
+              }
+            ],
+            organizationalUnits: [
+              {
+                id: 'ou-root-123456',
+                name: 'Root OU',
+                type: 'ROOT'
+              },
+              {
+                id: 'ou-prod-789012',
+                name: 'Production OU',
+                parentId: 'ou-root-123456',
+                type: 'ORGANIZATIONAL_UNIT'
+              },
+              {
+                id: 'ou-dev-345678',
+                name: 'Development OU',
+                parentId: 'ou-root-123456',
+                type: 'ORGANIZATIONAL_UNIT'
+              }
+            ],
+            policies: [
+              {
+                id: 'p-fullaccess',
+                name: 'FullAWSAccess',
+                type: 'SERVICE_CONTROL_POLICY',
+                awsManaged: true,
+                description: 'Allows full access to AWS services and resources.',
+                content: '{\n  "Version": "2012-10-17",\n  "Statement": {\n    "Effect": "Allow",\n    "Action": "*",\n    "Resource": "*"\n  }\n}'
+              },
+              {
+                id: 'p-deny-root',
+                name: 'DenyRootAccess',
+                type: 'SERVICE_CONTROL_POLICY',
+                awsManaged: false,
+                description: 'Prevents root user access in member accounts.',
+                content: '{\n  "Version": "2012-10-17",\n  "Statement": {\n    "Effect": "Deny",\n    "Principal": {\n      "AWS": "*"\n    },\n    "Action": "*",\n    "Resource": "*",\n    "Condition": {\n      "StringEquals": {\n        "aws:RequestedRegion": "us-east-1"\n      }\n    }\n  }\n}'
+              },
+              {
+                id: 'p-tag-policy',
+                name: 'RequiredTags',
+                type: 'TAG_POLICY',
+                awsManaged: false,
+                description: 'Enforces required tags on resources.',
+                content: '{\n  "tags": {\n    "Environment": {\n      "tag_key": {\n        "@@assign": "Environment"\n      },\n      "tag_value": {\n        "@@assign": ["Production", "Development", "Staging"]\n      },\n      "enforced_for": {\n        "@@assign": ["ec2:instance", "s3:bucket"]\n      }\n    }\n  }\n}'
+              }
+            ]
+          },
+          support: {
+            plan: {
+              planName: 'Business',
+              planType: 'BUSINESS',
+              trustedAdvisorAccess: true,
+              caseManagementAccess: true,
+              checksAvailable: 115,
+              features: {
+                trustedAdvisor: true,
+                caseManagement: true,
+                phoneSupport: false,
+                chatSupport: true,
+                architecturalGuidance: false,
+                infrastructureEventManagement: false,
+              }
+            },
+            trustedAdvisorChecks: [
+              {
+                id: 'check-001',
+                name: 'Security Groups - Unrestricted Access',
+                category: 'Security',
+                status: 'warning',
+                description: 'Checks for security groups that allow unrestricted access (0.0.0.0/0) on specific ports.'
+              },
+              {
+                id: 'check-002', 
+                name: 'MFA on Root Account',
+                category: 'Security',
+                status: 'ok',
+                description: 'Checks whether MFA is enabled for the root account.'
+              },
+              {
+                id: 'check-003',
+                name: 'Low Utilization Amazon EC2 Instances',
+                category: 'Cost Optimization',
+                status: 'warning',
+                description: 'Checks for EC2 instances that appear to be underutilized.'
+              }
+            ]
+          }
         },
         createdAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
@@ -175,6 +309,66 @@ export default function AnalysisResults() {
           category: 'Monitoring',
           ruleId: 'EC2-004',
           documentationUrl: 'https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-cloudwatch-new.html'
+        },
+        {
+          id: 'finding-7',
+          title: 'Service Control Policy (SCP)で過度な権限が許可',
+          description: 'FullAWSAccessポリシーがすべてのアカウントに適用されており、最小権限原則に反しています。',
+          severity: 'HIGH',
+          pillar: 'SECURITY',
+          resource: 'AWS::Organizations::Policy',
+          recommendation: 'FullAWSAccessポリシーを削除し、各OUの用途に応じた制限的なSCPを作成してください。本番環境では特に厳格な制限を設定することを推奨します。',
+          category: 'Identity & Access Management',
+          ruleId: 'ORG-001',
+          documentationUrl: 'https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html'
+        },
+        {
+          id: 'finding-8',
+          title: 'Organizationsのタグポリシーが部分的にしか適用されていない',
+          description: 'タグポリシーがEnvironmentタグのみに限定されており、Cost Centerやプロジェクト識別タグが不足しています。',
+          severity: 'MEDIUM',
+          pillar: 'OPERATIONAL_EXCELLENCE',
+          resource: 'AWS::Organizations::Policy',
+          recommendation: 'CostCenter、Project、Owner等の追加のタグを必須化し、リソースの管理責任とコスト配分を明確化してください。',
+          category: 'Resource Management',
+          ruleId: 'ORG-002',
+          documentationUrl: 'https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_tag-policies.html'
+        },
+        {
+          id: 'finding-9',
+          title: 'マルチアカウント戦略でのワークロード分離が不十分',
+          description: '本番、開発、ステージング環境が適切なOUで分離されていますが、セキュリティアカウント(Security OU)とログアカウント(Logging OU)が不足しています。',
+          severity: 'MEDIUM',
+          pillar: 'SECURITY',
+          resource: 'AWS::Organizations::Organization',
+          recommendation: 'セキュリティ統制用のSecurity OUとログ集約用のLogging OUを作成し、各々に専用アカウントを配置してください。これによりセキュリティの責任分離とコンプライアンス要件への対応が向上します。',
+          category: 'Multi-Account Architecture',
+          ruleId: 'ORG-003',
+          documentationUrl: 'https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/organizing-your-aws-environment.html'
+        },
+        {
+          id: 'finding-10',
+          title: 'Basicサポートプランでは高可用性要件に対応困難',
+          description: 'Basic Support Planでは、Trusted Advisorの完全機能やケース管理が利用できず、本番環境での障害対応時間が長期化する可能性があります。',
+          severity: 'HIGH',
+          pillar: 'RELIABILITY',
+          resource: 'AWS::Support::Plan',
+          recommendation: 'Business Support以上のプランへのアップグレードを検討してください。特に本番環境では、24時間サポートとTrusted Advisorの完全機能が障害対応とパフォーマンス最適化に重要です。',
+          category: 'Support & Maintenance',
+          ruleId: 'SUPPORT-001',
+          documentationUrl: 'https://aws.amazon.com/support/plans/'
+        },
+        {
+          id: 'finding-11',
+          title: 'Trusted Advisorの推奨事項が未実装',
+          description: 'Trusted Advisorでセキュリティグループの制限なしアクセスとEC2インスタンスの低使用率に関する警告が出ていますが、対応が行われていません。',
+          severity: 'MEDIUM',
+          pillar: 'COST_OPTIMIZATION',
+          resource: 'AWS::Support::TrustedAdvisorCheck',
+          recommendation: 'Trusted Advisorの推奨事項を定期的にレビューし、セキュリティ向上とコスト最適化のために対応計画を策定してください。',
+          category: 'Advisory Management',
+          ruleId: 'SUPPORT-002',
+          documentationUrl: 'https://docs.aws.amazon.com/support/latest/user/trusted-advisor.html'
         }
       ];
       
@@ -673,6 +867,43 @@ export default function AnalysisResults() {
         </Space>
       ),
     },
+    // Organizations tab - only show for Live Scan analyses
+    ...(analysis.strategy === 'LIVE_SCAN' && analysis.scanResults?.organizations ? [{
+      key: 'organizations',
+      label: (
+        <Space>
+          <BankOutlined />
+          Organizations
+          <Badge count={analysis.scanResults.organizations.accounts?.length || 0} style={{ backgroundColor: '#52c41a' }} />
+        </Space>
+      ),
+      children: (
+        <OrganizationsView 
+          data={analysis.scanResults.organizations}
+          loading={false}
+        />
+      ),
+    }] : []),
+    // Support tab - only show for Live Scan analyses
+    ...(analysis.strategy === 'LIVE_SCAN' && analysis.scanResults?.support ? [{
+      key: 'support',
+      label: (
+        <Space>
+          <SafetyOutlined />
+          サポートプラン
+          <Badge 
+            count={analysis.scanResults.support.plan?.planType} 
+            style={{ backgroundColor: analysis.scanResults.support.plan?.planType === 'BASIC' ? '#ff4d4f' : '#52c41a' }} 
+          />
+        </Space>
+      ),
+      children: (
+        <SupportView 
+          data={analysis.scanResults.support}
+          loading={false}
+        />
+      ),
+    }] : []),
     ...pillarTabs.map((tab) => ({
       key: tab.key,
       label: tab.label,

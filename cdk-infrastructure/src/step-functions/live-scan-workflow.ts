@@ -3,24 +3,7 @@
  * Orchestrates the complete live AWS account scanning process
  */
 
-import { 
-  DefinitionBody,
-  StateMachine,
-  Wait,
-  WaitTime,
-  Pass,
-  Choice,
-  Condition,
-  TaskInput,
-  JsonPath,
-  Parallel,
-  Succeed,
-  Fail,
-  Map,
-  ItemsPath,
-  MaxConcurrency,
-} from 'aws-cdk-lib/aws-stepfunctions';
-import { LambdaInvoke } from 'aws-cdk-lib/aws-stepfunctions-tasks';
+import { DefinitionBody } from 'aws-cdk-lib/aws-stepfunctions';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 
 export interface LiveScanWorkflowProps {
@@ -33,312 +16,389 @@ export class LiveScanWorkflow {
   public static createDefinition(props: LiveScanWorkflowProps): DefinitionBody {
     const { liveScannerFunction, frameworkAnalysisFunction, storeResultsFunction } = props;
 
-    // Step 1: Validate scan request
-    const validateRequest = new Pass('Validate Scan Request', {
-      parameters: {
-        'analysisId.$': '$.analysisId',
-        'tenantId.$': '$.tenantId',
-        'projectId.$': '$.projectId',
-        'awsConfig.$': '$.awsConfig',
-        'scanScope.$': '$.scanScope',
-        'frameworks.$': '$.frameworks',
-        'validationResult': 'PASSED',
-        'startTime.$': '$$.State.EnteredTime',
-      },
-    });
-
-    // Step 2: Initialize analysis record
-    const initializeAnalysis = new Pass('Initialize Analysis', {
-      parameters: {
-        'analysisId.$': '$.analysisId',
-        'status': 'INITIALIZING',
-        'progress': 0,
-        'initTime.$': '$$.State.EnteredTime',
-      },
-    });
-
-    // Step 3: Perform live AWS resource scanning
-    const performLiveScan = new LambdaInvoke('Perform Live Scan', {
-      lambdaFunction: liveScannerFunction,
-      payload: TaskInput.fromObject({
-        'analysisId.$': '$.analysisId',
-        'tenantId.$': '$.tenantId',
-        'projectId.$': '$.projectId',
-        'awsConfig.$': '$.awsConfig',
-        'scanScope.$': '$.scanScope',
-        'frameworks.$': '$.frameworks',
-      }),
-      resultPath: '$.scanResult',
-    });
-
-    // Step 4: Check scan status
-    const checkScanStatus = new Choice('Check Scan Status')
-      .when(
-        Condition.stringEquals('$.scanResult.Payload.status', 'FAILED'),
-        new Fail('Scan Failed', {
-          cause: 'Live AWS resource scan failed',
-          error: 'ScanFailure',
-        })
-      )
-      .when(
-        Condition.stringEquals('$.scanResult.Payload.status', 'PARTIAL'),
-        new Pass('Handle Partial Scan', {
-          parameters: {
-            'analysisId.$': '$.analysisId',
-            'scanStatus': 'PARTIAL',
-            'resources.$': '$.scanResult.Payload.scanResults',
-            'summary.$': '$.scanResult.Payload.summary',
-            'frameworks.$': '$.frameworks',
+    const definition = {
+      Comment: "Live AWS Account Scanning Workflow",
+      StartAt: "ValidateRequest",
+      States: {
+        ValidateRequest: {
+          Type: "Pass",
+          Parameters: {
+            "analysisId.$": "$.analysisId",
+            "tenantId.$": "$.tenantId",
+            "projectId.$": "$.projectId",
+            "awsConfig.$": "$.awsConfig",
+            "scanScope.$": "$.scanScope",
+            "frameworks.$": "$.frameworks",
+            "validationResult": "PASSED",
+            "startTime.$": "$$.State.EnteredTime"
           },
-        })
-      )
-      .otherwise(
-        new Pass('Handle Successful Scan', {
-          parameters: {
-            'analysisId.$': '$.analysisId',
-            'scanStatus': 'COMPLETED',
-            'resources.$': '$.scanResult.Payload.scanResults',
-            'summary.$': '$.scanResult.Payload.summary',
-            'frameworks.$': '$.frameworks',
+          Next: "InitializeAnalysis"
+        },
+        InitializeAnalysis: {
+          Type: "Pass",
+          Parameters: {
+            "analysisId.$": "$.analysisId",
+            "status": "INITIALIZING",
+            "progress": 0,
+            "initTime.$": "$$.State.EnteredTime"
           },
-        })
-      );
+          Next: "PerformLiveScan"
+        },
+        PerformLiveScan: {
+          Type: "Task",
+          Resource: "arn:aws:states:::lambda:invoke",
+          Parameters: {
+            FunctionName: liveScannerFunction.functionArn,
+            Payload: {
+              "analysisId.$": "$.analysisId",
+              "tenantId.$": "$.tenantId",
+              "projectId.$": "$.projectId",
+              "awsConfig.$": "$.awsConfig",
+              "scanScope.$": "$.scanScope",
+              "frameworks.$": "$.frameworks"
+            }
+          },
+          ResultPath: "$.scanResult",
+          Next: "CheckScanStatus",
+          Retry: [
+            {
+              ErrorEquals: ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+              IntervalSeconds: 5,
+              MaxAttempts: 3,
+              BackoffRate: 2.0
+            }
+          ],
+          Catch: [
+            {
+              ErrorEquals: ["States.ALL"],
+              Next: "ScanFailed",
+              ResultPath: "$.error"
+            }
+          ]
+        },
+        CheckScanStatus: {
+          Type: "Choice",
+          Choices: [
+            {
+              Variable: "$.scanResult.Payload.status",
+              StringEquals: "FAILED",
+              Next: "ScanFailed"
+            },
+            {
+              Variable: "$.scanResult.Payload.status",
+              StringEquals: "COMPLETED",
+              Next: "ProcessFrameworks"
+            }
+          ],
+          Default: "WaitForScan"
+        },
+        WaitForScan: {
+          Type: "Wait",
+          Seconds: 30,
+          Next: "PerformLiveScan"
+        },
+        ProcessFrameworks: {
+          Type: "Map",
+          ItemsPath: "$.frameworks",
+          MaxConcurrency: 3,
+          Iterator: {
+            StartAt: "AnalyzeFramework",
+            States: {
+              AnalyzeFramework: {
+                Type: "Task",
+                Resource: "arn:aws:states:::lambda:invoke",
+                Parameters: {
+                  FunctionName: frameworkAnalysisFunction.functionArn,
+                  Payload: {
+                    "analysisId.$": "$.analysisId",
+                    "framework.$": "$",
+                    "scanResult.$": "$.scanResult.Payload"
+                  }
+                },
+                End: true
+              }
+            }
+          },
+          ResultPath: "$.frameworkResults",
+          Next: "StoreResults"
+        },
+        StoreResults: {
+          Type: "Task",
+          Resource: "arn:aws:states:::lambda:invoke",
+          Parameters: {
+            FunctionName: storeResultsFunction.functionArn,
+            Payload: {
+              "analysisId.$": "$.analysisId",
+              "tenantId.$": "$.tenantId",
+              "projectId.$": "$.projectId",
+              "scanResult.$": "$.scanResult.Payload",
+              "frameworkResults.$": "$.frameworkResults",
+              "completedAt.$": "$$.State.EnteredTime"
+            }
+          },
+          ResultPath: "$.storeResult",
+          Next: "ScanCompleted",
+          Retry: [
+            {
+              ErrorEquals: ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+              IntervalSeconds: 5,
+              MaxAttempts: 3,
+              BackoffRate: 2.0
+            }
+          ]
+        },
+        ScanCompleted: {
+          Type: "Pass",
+          Parameters: {
+            "status": "COMPLETED",
+            "analysisId.$": "$.analysisId",
+            "completedAt.$": "$$.State.EnteredTime",
+            "scanSummary.$": "$.scanResult.Payload.summary",
+            "frameworkSummary.$": "$.frameworkResults"
+          },
+          End: true
+        },
+        ScanFailed: {
+          Type: "Fail",
+          Cause: "Live AWS resource scan failed",
+          Error: "ScanFailure"
+        }
+      }
+    };
 
-    // Step 5: Parallel framework analysis
-    const frameworkAnalysis = new Map('Analyze with Frameworks', {
-      itemsPath: JsonPath.stringAt('$.frameworks'),
-      maxConcurrency: 3, // Process up to 3 frameworks in parallel
-      parameters: {
-        'analysisId.$': '$.analysisId',
-        'tenantId.$': '$.tenantId',
-        'framework.$': '$$.Map.Item.Value',
-        'resources.$': '$.resources',
-        'scanSummary.$': '$.summary',
-      },
-    }).iterator(
-      new LambdaInvoke('Run Framework Analysis', {
-        lambdaFunction: frameworkAnalysisFunction,
-        payload: TaskInput.fromJsonPathAt('$'),
-        resultPath: '$.frameworkResult',
-      })
-    );
-
-    // Step 6: Aggregate analysis results
-    const aggregateResults = new Pass('Aggregate Analysis Results', {
-      parameters: {
-        'analysisId.$': '$.analysisId',
-        'tenantId.$': '$.tenantId',
-        'projectId.$': '$.projectId',
-        'scanStatus.$': '$.scanStatus',
-        'scanSummary.$': '$.summary',
-        'frameworkResults.$': '$[*].frameworkResult.Payload',
-        'completedAt.$': '$$.State.EnteredTime',
-        'totalFindings.$': '$$.Map.Item.Value.frameworkResult.Payload.findings[*] | length(@)',
-      },
-    });
-
-    // Step 7: Store final results
-    const storeFinalResults = new LambdaInvoke('Store Final Results', {
-      lambdaFunction: storeResultsFunction,
-      payload: TaskInput.fromJsonPathAt('$'),
-      resultPath: '$.storeResult',
-    });
-
-    // Step 8: Send completion notification
-    const sendNotification = new Pass('Send Completion Notification', {
-      parameters: {
-        'analysisId.$': '$.analysisId',
-        'tenantId.$': '$.tenantId',
-        'status': 'COMPLETED',
-        'notificationSent': true,
-        'finalResults.$': '$.storeResult.Payload',
-      },
-    });
-
-    // Success state
-    const scanCompleted = new Succeed('Live Scan Completed');
-
-    // Error handling for framework analysis
-    const handleFrameworkError = new Pass('Handle Framework Analysis Error', {
-      parameters: {
-        'analysisId.$': '$.analysisId',
-        'error': 'Framework analysis failed',
-        'partialResults': true,
-      },
-    });
-
-    // Create the workflow definition
-    const definition = validateRequest
-      .next(initializeAnalysis)
-      .next(performLiveScan)
-      .next(checkScanStatus)
-      .next(frameworkAnalysis.addCatch(handleFrameworkError, {
-        errors: ['States.TaskFailed', 'States.ALL'],
-        resultPath: '$.frameworkError',
-      }))
-      .next(aggregateResults)
-      .next(storeFinalResults)
-      .next(sendNotification)
-      .next(scanCompleted);
-
-    return DefinitionBody.fromChainable(definition);
+    return DefinitionBody.fromString(JSON.stringify(definition));
   }
 
-  /**
-   * Create a parallel scanning workflow for multiple accounts
-   */
   public static createMultiAccountDefinition(props: LiveScanWorkflowProps): DefinitionBody {
     const { liveScannerFunction, frameworkAnalysisFunction, storeResultsFunction } = props;
 
-    // Multi-account parallel scanning
-    const parallelAccountScan = new Parallel('Parallel Account Scan')
-      .branch(
-        // Branch for each AWS account
-        new Map('Scan AWS Accounts', {
-          itemsPath: JsonPath.stringAt('$.awsAccounts'),
-          maxConcurrency: 2, // Scan up to 2 accounts in parallel
-          parameters: {
-            'analysisId.$': '$.analysisId',
-            'tenantId.$': '$.tenantId',
-            'projectId.$': '$.projectId',
-            'awsConfig.$': '$$.Map.Item.Value',
-            'scanScope.$': '$.scanScope',
-            'frameworks.$': '$.frameworks',
+    const definition = {
+      Comment: "Multi-Account Live AWS Scanning Workflow",
+      StartAt: "ValidateMultiAccountRequest",
+      States: {
+        ValidateMultiAccountRequest: {
+          Type: "Pass",
+          Parameters: {
+            "scanId.$": "$.scanId",
+            "tenantId.$": "$.tenantId",
+            "projectId.$": "$.projectId",
+            "accountIds.$": "$.accountIds",
+            "frameworks.$": "$.frameworks",
+            "scanScope.$": "$.scanScope",
+            "startTime.$": "$$.State.EnteredTime"
           },
-        }).iterator(
-          new LambdaInvoke('Scan Individual Account', {
-            lambdaFunction: liveScannerFunction,
-            payload: TaskInput.fromJsonPathAt('$'),
-          })
-        )
-      );
+          Next: "ProcessAccounts"
+        },
+        ProcessAccounts: {
+          Type: "Map",
+          ItemsPath: "$.accountIds",
+          MaxConcurrency: 5,
+          Iterator: {
+            StartAt: "ScanAccount",
+            States: {
+              ScanAccount: {
+                Type: "Task",
+                Resource: "arn:aws:states:::lambda:invoke",
+                Parameters: {
+                  FunctionName: liveScannerFunction.functionArn,
+                  Payload: {
+                    "accountId.$": "$",
+                    "tenantId.$": "$.tenantId",
+                    "projectId.$": "$.projectId",
+                    "frameworks.$": "$.frameworks",
+                    "scanScope.$": "$.scanScope"
+                  }
+                },
+                Next: "AnalyzeAccountFrameworks",
+                Retry: [
+                  {
+                    ErrorEquals: ["Lambda.ServiceException", "Lambda.AWSLambdaException"],
+                    IntervalSeconds: 5,
+                    MaxAttempts: 2,
+                    BackoffRate: 2.0
+                  }
+                ],
+                Catch: [
+                  {
+                    ErrorEquals: ["States.ALL"],
+                    Next: "AccountScanFailed",
+                    ResultPath: "$.error"
+                  }
+                ]
+              },
+              AnalyzeAccountFrameworks: {
+                Type: "Task",
+                Resource: "arn:aws:states:::lambda:invoke",
+                Parameters: {
+                  FunctionName: frameworkAnalysisFunction.functionArn,
+                  Payload: {
+                    "accountId.$": "$",
+                    "scanResult.$": "$.Payload",
+                    "frameworks.$": "$.frameworks"
+                  }
+                },
+                Next: "AccountScanCompleted",
+                Retry: [
+                  {
+                    ErrorEquals: ["Lambda.ServiceException", "Lambda.AWSLambdaException"],
+                    IntervalSeconds: 5,
+                    MaxAttempts: 2,
+                    BackoffRate: 2.0
+                  }
+                ]
+              },
+              AccountScanCompleted: {
+                Type: "Pass",
+                Parameters: {
+                  "accountId.$": "$.accountId",
+                  "status": "COMPLETED",
+                  "scanResult.$": "$.Payload"
+                },
+                End: true
+              },
+              AccountScanFailed: {
+                Type: "Pass",
+                Parameters: {
+                  "accountId.$": "$.accountId",
+                  "status": "FAILED",
+                  "error.$": "$.error"
+                },
+                End: true
+              }
+            }
+          },
+          ResultPath: "$.accountResults",
+          Next: "StoreMultiAccountResults"
+        },
+        StoreMultiAccountResults: {
+          Type: "Task",
+          Resource: "arn:aws:states:::lambda:invoke",
+          Parameters: {
+            FunctionName: storeResultsFunction.functionArn,
+            Payload: {
+              "scanId.$": "$.scanId",
+              "tenantId.$": "$.tenantId",
+              "projectId.$": "$.projectId",
+              "accountResults.$": "$.accountResults",
+              "completedAt.$": "$$.State.EnteredTime"
+            }
+          },
+          Next: "MultiAccountScanCompleted"
+        },
+        MultiAccountScanCompleted: {
+          Type: "Pass",
+          Parameters: {
+            "status": "COMPLETED",
+            "scanId.$": "$.scanId",
+            "completedAt.$": "$$.State.EnteredTime",
+            "totalAccounts.$": "$.accountResults.length",
+            "results.$": "$.accountResults"
+          },
+          End: true
+        }
+      }
+    };
 
-    // Aggregate multi-account results
-    const aggregateMultiAccountResults = new Pass('Aggregate Multi-Account Results', {
-      parameters: {
-        'analysisId.$': '$.analysisId',
-        'tenantId.$': '$.tenantId',
-        'projectId.$': '$.projectId',
-        'accountResults.$': '$[0]', // Results from parallel account scan
-        'totalAccounts.$': '$[0] | length(@)',
-        'aggregatedAt.$': '$$.State.EnteredTime',
-      },
-    });
-
-    // Framework analysis across all accounts
-    const crossAccountFrameworkAnalysis = new Map('Cross-Account Framework Analysis', {
-      itemsPath: JsonPath.stringAt('$.frameworks'),
-      maxConcurrency: 3,
-      parameters: {
-        'analysisId.$': '$.analysisId',
-        'tenantId.$': '$.tenantId',
-        'framework.$': '$$.Map.Item.Value',
-        'accountResults.$': '$.accountResults',
-        'analysisType': 'CROSS_ACCOUNT',
-      },
-    }).iterator(
-      new LambdaInvoke('Run Cross-Account Framework Analysis', {
-        lambdaFunction: frameworkAnalysisFunction,
-        payload: TaskInput.fromJsonPathAt('$'),
-      })
-    );
-
-    // Final aggregation
-    const finalAggregation = new Pass('Final Multi-Account Aggregation', {
-      parameters: {
-        'analysisId.$': '$.analysisId',
-        'analysisType': 'MULTI_ACCOUNT',
-        'accountResults.$': '$.accountResults',
-        'frameworkResults.$': '$[*].Payload',
-        'completedAt.$': '$$.State.EnteredTime',
-      },
-    });
-
-    // Store multi-account results
-    const storeMultiAccountResults = new LambdaInvoke('Store Multi-Account Results', {
-      lambdaFunction: storeResultsFunction,
-      payload: TaskInput.fromJsonPathAt('$'),
-    });
-
-    const multiAccountCompleted = new Succeed('Multi-Account Scan Completed');
-
-    const multiAccountDefinition = parallelAccountScan
-      .next(aggregateMultiAccountResults)
-      .next(crossAccountFrameworkAnalysis)
-      .next(finalAggregation)
-      .next(storeMultiAccountResults)
-      .next(multiAccountCompleted);
-
-    return DefinitionBody.fromChainable(multiAccountDefinition);
+    return DefinitionBody.fromString(JSON.stringify(definition));
   }
 
-  /**
-   * Create a scheduled scanning workflow
-   */
   public static createScheduledScanDefinition(props: LiveScanWorkflowProps): DefinitionBody {
     const { liveScannerFunction, frameworkAnalysisFunction, storeResultsFunction } = props;
 
-    // Scheduled scan initialization
-    const initScheduledScan = new Pass('Initialize Scheduled Scan', {
-      parameters: {
-        'scanType': 'SCHEDULED',
-        'startTime.$': '$$.State.EnteredTime',
-        'analysisId.$': '$.analysisId',
-        'tenantId.$': '$.tenantId',
-        'projectId.$': '$.projectId',
-        'schedule.$': '$.schedule',
-      },
-    });
-
-    // Check if scan should run based on schedule
-    const checkSchedule = new Choice('Check Schedule')
-      .when(
-        Condition.stringEquals('$.schedule.enabled', 'true'),
-        new Pass('Schedule Enabled', {
-          parameters: {
-            'proceed': true,
-            'scheduledAt.$': '$$.State.EnteredTime',
+    const definition = {
+      Comment: "Scheduled Live AWS Scanning Workflow",
+      StartAt: "ValidateScheduledRequest",
+      States: {
+        ValidateScheduledRequest: {
+          Type: "Pass",
+          Parameters: {
+            "scheduleId.$": "$.scheduleId",
+            "tenantId.$": "$.tenantId",
+            "projectId.$": "$.projectId",
+            "repositoryIds.$": "$.repositoryIds",
+            "frameworks.$": "$.frameworks",
+            "triggeredBy": "SCHEDULED",
+            "startTime.$": "$$.State.EnteredTime"
           },
-        })
-      )
-      .otherwise(
-        new Pass('Schedule Disabled', {
-          parameters: {
-            'proceed': false,
-            'reason': 'Scheduled scanning is disabled',
+          Next: "ProcessRepositories"
+        },
+        ProcessRepositories: {
+          Type: "Map",
+          ItemsPath: "$.repositoryIds",
+          MaxConcurrency: 3,
+          Iterator: {
+            StartAt: "ScanRepository",
+            States: {
+              ScanRepository: {
+                Type: "Task",
+                Resource: "arn:aws:states:::lambda:invoke",
+                Parameters: {
+                  FunctionName: liveScannerFunction.functionArn,
+                  Payload: {
+                    "repositoryId.$": "$",
+                    "tenantId.$": "$.tenantId",
+                    "projectId.$": "$.projectId",
+                    "frameworks.$": "$.frameworks",
+                    "scanType": "SCHEDULED"
+                  }
+                },
+                Next: "AnalyzeRepositoryFrameworks",
+                Retry: [
+                  {
+                    ErrorEquals: ["Lambda.ServiceException", "Lambda.AWSLambdaException"],
+                    IntervalSeconds: 10,
+                    MaxAttempts: 2,
+                    BackoffRate: 2.0
+                  }
+                ]
+              },
+              AnalyzeRepositoryFrameworks: {
+                Type: "Task",
+                Resource: "arn:aws:states:::lambda:invoke",
+                Parameters: {
+                  FunctionName: frameworkAnalysisFunction.functionArn,
+                  Payload: {
+                    "repositoryId.$": "$",
+                    "scanResult.$": "$.Payload",
+                    "frameworks.$": "$.frameworks"
+                  }
+                },
+                End: true
+              }
+            }
           },
-        })
-      );
+          ResultPath: "$.repositoryResults",
+          Next: "StoreScheduledResults"
+        },
+        StoreScheduledResults: {
+          Type: "Task",
+          Resource: "arn:aws:states:::lambda:invoke",
+          Parameters: {
+            FunctionName: storeResultsFunction.functionArn,
+            Payload: {
+              "scheduleId.$": "$.scheduleId",
+              "tenantId.$": "$.tenantId",
+              "projectId.$": "$.projectId",
+              "repositoryResults.$": "$.repositoryResults",
+              "completedAt.$": "$$.State.EnteredTime"
+            }
+          },
+          Next: "ScheduledScanCompleted"
+        },
+        ScheduledScanCompleted: {
+          Type: "Pass",
+          Parameters: {
+            "status": "COMPLETED",
+            "scheduleId.$": "$.scheduleId",
+            "completedAt.$": "$$.State.EnteredTime",
+            "totalRepositories.$": "$.repositoryResults.length",
+            "results.$": "$.repositoryResults"
+          },
+          End: true
+        }
+      }
+    };
 
-    // Wait for next scheduled time (if needed)
-    const waitForSchedule = new Wait('Wait for Schedule', {
-      time: WaitTime.duration(require('aws-cdk-lib').Duration.minutes(1)),
-    });
-
-    // Run the main scanning workflow
-    const runScheduledScan = new LambdaInvoke('Run Scheduled Scan', {
-      lambdaFunction: liveScannerFunction,
-      payload: TaskInput.fromJsonPathAt('$'),
-      resultPath: '$.scheduledScanResult',
-    });
-
-    // Check if should continue with framework analysis
-    const checkContinue = new Choice('Check Continue')
-      .when(
-        Condition.booleanEquals('$.proceed', true),
-        runScheduledScan
-      )
-      .otherwise(
-        new Succeed('Scheduled Scan Skipped')
-      );
-
-    const scheduledCompleted = new Succeed('Scheduled Scan Completed');
-
-    const scheduledDefinition = initScheduledScan
-      .next(checkSchedule)
-      .next(checkContinue)
-      .next(scheduledCompleted);
-
-    return DefinitionBody.fromChainable(scheduledDefinition);
+    return DefinitionBody.fromString(JSON.stringify(definition));
   }
 }

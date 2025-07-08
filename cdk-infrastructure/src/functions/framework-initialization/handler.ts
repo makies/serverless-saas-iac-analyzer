@@ -7,7 +7,7 @@ import { Logger } from '@aws-lambda-powertools/logger';
 import { FrameworkRegistry, RuleTemplates } from '../../shared/framework-engine';
 
 const logger = new Logger({
-  serviceName: 'framework-initialization',
+  serviceName: 'cloud-bpa',
   logLevel: (process.env.LOG_LEVEL as 'DEBUG' | 'INFO' | 'WARN' | 'ERROR') || 'INFO',
 });
 

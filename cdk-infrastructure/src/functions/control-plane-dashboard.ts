@@ -18,9 +18,9 @@ import { Tracer } from '@aws-lambda-powertools/tracer';
 import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
 
 // PowerTools setup
-const logger = new Logger({ serviceName: 'control-plane-dashboard' });
-const tracer = new Tracer({ serviceName: 'control-plane-dashboard' });
-const metrics = new Metrics({ serviceName: 'control-plane-dashboard', namespace: 'CloudBPA/Control' });
+const logger = new Logger({ serviceName: 'cloud-bpa' });
+const tracer = new Tracer({ serviceName: 'cloud-bpa' });
+const metrics = new Metrics({ serviceName: 'cloud-bpa', namespace: 'CloudBPA/Control' });
 
 // AWS Clients
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));

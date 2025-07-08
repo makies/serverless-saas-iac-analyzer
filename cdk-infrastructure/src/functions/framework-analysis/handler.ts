@@ -10,7 +10,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 
 const logger = new Logger({
-  serviceName: 'framework-analysis',
+  serviceName: 'cloud-bpa',
   logLevel: (process.env.LOG_LEVEL as 'DEBUG' | 'INFO' | 'WARN' | 'ERROR') || 'INFO',
 });
 

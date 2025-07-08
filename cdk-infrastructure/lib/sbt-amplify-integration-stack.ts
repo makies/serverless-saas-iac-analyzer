@@ -211,7 +211,7 @@ export class SBTAmplifyIntegrationStack extends cdk.Stack {
         USER_POOL_ID: props.userPoolId || 'PLACEHOLDER',
         EMAIL_TEMPLATE_NAME: 'TenantWelcomeTemplate',
         FROM_EMAIL: config.sesConfig?.fromEmail || 'noreply@cloudbpa.com',
-        SUPPORT_EMAIL: config.sesConfig?.supportEmail || 'support@cloudbpa.com',
+        SUPPORT_EMAIL: config.sesConfig?.replyToEmail || 'support@cloudbpa.com',
         DOMAIN_NAME: config.domainName || 'app.cloudbpa.com',
         LOG_LEVEL: config.lambdaConfig.logLevel,
       },

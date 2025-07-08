@@ -16,9 +16,9 @@ import * as ExcelJS from 'exceljs';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // PowerTools setup
-const logger = new Logger({ serviceName: 'report-generation' });
-const tracer = new Tracer({ serviceName: 'report-generation' });
-const metrics = new Metrics({ serviceName: 'report-generation', namespace: 'CloudBPA/Reports' });
+const logger = new Logger({ serviceName: 'cloud-bpa' });
+const tracer = new Tracer({ serviceName: 'cloud-bpa' });
+const metrics = new Metrics({ serviceName: 'cloud-bpa', namespace: 'CloudBPA/Reports' });
 
 // AWS Clients
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));

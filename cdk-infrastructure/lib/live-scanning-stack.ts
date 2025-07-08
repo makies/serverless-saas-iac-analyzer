@@ -249,8 +249,8 @@ export class LiveScanningStack extends cdk.Stack {
     dashboard.addWidgets(
       new cdk.aws_cloudwatch.GraphWidget({
         title: 'Live Scan Executions',
-        left: [this.liveScanStateMachine.metricExecutionsFailed()],
-        right: [this.liveScanStateMachine.metricExecutionsSucceeded()],
+        left: [this.liveScanStateMachine.metricFailed()],
+        right: [this.liveScanStateMachine.metricSucceeded()],
       }),
       new cdk.aws_cloudwatch.GraphWidget({
         title: 'Lambda Function Metrics',

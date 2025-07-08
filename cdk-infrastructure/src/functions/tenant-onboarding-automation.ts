@@ -30,9 +30,9 @@ import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
 import { v4 as uuidv4 } from 'uuid';
 
 // PowerTools setup
-const logger = new Logger({ serviceName: 'tenant-onboarding-automation' });
-const tracer = new Tracer({ serviceName: 'tenant-onboarding-automation' });
-const metrics = new Metrics({ serviceName: 'tenant-onboarding-automation', namespace: 'CloudBPA/Control' });
+const logger = new Logger({ serviceName: 'cloud-bpa' });
+const tracer = new Tracer({ serviceName: 'cloud-bpa' });
+const metrics = new Metrics({ serviceName: 'cloud-bpa', namespace: 'CloudBPA/Control' });
 
 // AWS Clients
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));

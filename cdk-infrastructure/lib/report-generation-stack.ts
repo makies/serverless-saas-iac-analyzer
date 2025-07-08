@@ -420,8 +420,16 @@ export class ReportGenerationStack extends cdk.Stack {
       new cdk.aws_cloudwatch.GraphWidget({
         title: 'Reports Bucket Metrics',
         left: [
-          this.reportsBucket.metricBucketSizeBytes(),
-          this.reportsBucket.metricNumberOfObjects(),
+          new cdk.aws_cloudwatch.Metric({
+            namespace: 'AWS/S3',
+            metricName: 'BucketSizeBytes',
+            dimensionsMap: { BucketName: this.reportsBucket.bucketName },
+          }),
+          new cdk.aws_cloudwatch.Metric({
+            namespace: 'AWS/S3',
+            metricName: 'NumberOfObjects',
+            dimensionsMap: { BucketName: this.reportsBucket.bucketName },
+          }),
         ],
       }),
       new cdk.aws_cloudwatch.GraphWidget({

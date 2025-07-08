@@ -29,9 +29,9 @@ import { Tracer } from '@aws-lambda-powertools/tracer';
 import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
 
 // PowerTools setup
-const logger = new Logger({ serviceName: 'cognito-integration' });
-const tracer = new Tracer({ serviceName: 'cognito-integration' });
-const metrics = new Metrics({ serviceName: 'cognito-integration', namespace: 'CloudBPA/Auth' });
+const logger = new Logger({ serviceName: 'cloud-bpa' });
+const tracer = new Tracer({ serviceName: 'cloud-bpa' });
+const metrics = new Metrics({ serviceName: 'cloud-bpa', namespace: 'CloudBPA/Auth' });
 
 // AWS Clients
 const cognitoClient = new CognitoIdentityProviderClient({});

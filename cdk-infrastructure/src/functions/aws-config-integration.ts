@@ -28,9 +28,9 @@ import { Tracer } from '@aws-lambda-powertools/tracer';
 import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
 
 // PowerTools setup
-const logger = new Logger({ serviceName: 'aws-config-integration' });
-const tracer = new Tracer({ serviceName: 'aws-config-integration' });
-const metrics = new Metrics({ serviceName: 'aws-config-integration', namespace: 'CloudBPA/Config' });
+const logger = new Logger({ serviceName: 'cloud-bpa' });
+const tracer = new Tracer({ serviceName: 'cloud-bpa' });
+const metrics = new Metrics({ serviceName: 'cloud-bpa', namespace: 'CloudBPA/Config' });
 
 // AWS Clients
 const configClient = new ConfigServiceClient({});

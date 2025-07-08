@@ -53,6 +53,20 @@ export interface EnvironmentConfig {
     controlPlaneName: string;
   };
 
+  // SES設定
+  sesConfig: {
+    fromEmail: string;
+    replyToEmail: string;
+  };
+
+  // GitHub統合設定
+  githubConfig: {
+    clientId: string;
+    clientSecret: string;
+    webhookSecret: string;
+    appName: string;
+  };
+
   // モニタリング設定
   monitoringConfig: {
     enableXRay: boolean;
@@ -112,10 +126,22 @@ const baseConfig: Omit<EnvironmentConfig, 'environment' | 'account' | 'region'> 
     controlPlaneName: 'CloudBPA-ControlPlane',
   },
 
+  githubConfig: {
+    clientId: process.env.GITHUB_CLIENT_ID || 'your-github-client-id',
+    clientSecret: process.env.GITHUB_CLIENT_SECRET || 'your-github-client-secret',
+    webhookSecret: process.env.GITHUB_WEBHOOK_SECRET || 'your-webhook-secret',
+    appName: 'CloudBPA-GitHub-Integration',
+  },
+
   monitoringConfig: {
     enableXRay: true,
     enableCloudWatch: true,
     logRetentionDays: 30,
+  },
+
+  sesConfig: {
+    fromEmail: 'noreply@cloudbpa.com',
+    replyToEmail: 'support@cloudbpa.com',
   },
 };
 

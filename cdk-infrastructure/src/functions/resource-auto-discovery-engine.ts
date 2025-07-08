@@ -64,9 +64,9 @@ import { Tracer } from '@aws-lambda-powertools/tracer';
 import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
 
 // PowerTools setup
-const logger = new Logger({ serviceName: 'resource-auto-discovery' });
-const tracer = new Tracer({ serviceName: 'resource-auto-discovery' });
-const metrics = new Metrics({ serviceName: 'resource-auto-discovery', namespace: 'CloudBPA/Discovery' });
+const logger = new Logger({ serviceName: 'cloud-bpa' });
+const tracer = new Tracer({ serviceName: 'cloud-bpa' });
+const metrics = new Metrics({ serviceName: 'cloud-bpa', namespace: 'CloudBPA/Discovery' });
 
 // AWS Clients
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));

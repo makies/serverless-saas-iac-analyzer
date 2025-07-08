@@ -8,7 +8,7 @@ import { DynamoDBDocumentClient, PutCommand, UpdateCommand } from '@aws-sdk/lib-
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 
 const logger = new Logger({
-  serviceName: 'store-results',
+  serviceName: 'cloud-bpa',
   logLevel: (process.env.LOG_LEVEL as 'DEBUG' | 'INFO' | 'WARN' | 'ERROR') || 'INFO',
 });
 
