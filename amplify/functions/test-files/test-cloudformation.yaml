@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Test CloudFormation template for analysis'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Resources:
+  # S3 Bucket
+  TestBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: \!Sub 'test-bucket-${Environment}-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # Lambda Function
+  TestFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: \!Sub 'test-function-${Environment}'
+      Runtime: python3.9
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          def handler(event, context):
+              return {'statusCode': 200, 'body': 'Hello World'}
+      Role: \!GetAtt LambdaRole.Arn
+      Environment:
+        Variables:
+          BUCKET_NAME: \!Ref TestBucket
+
+  # IAM Role for Lambda
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: \!Sub '${TestBucket}/*'
+
+Outputs:
+  BucketName:
+    Description: 'Name of the S3 bucket'
+    Value: \!Ref TestBucket
+  FunctionArn:
+    Description: 'ARN of the Lambda function'
+    Value: \!GetAtt TestFunction.Arn
+EOF < /dev/null
