@@ -188,7 +188,7 @@ async function performLiveScan(scanEvent: LiveScanEvent): Promise<AnalysisResult
     }
   }
 
-  const status = errors.length === 0 ? 'COMPLETED' : 
+  const status = errors.length === 0 ? 'COMPLETED' :
                  scanResults.length > 0 ? 'PARTIAL' : 'FAILED';
 
   return {
@@ -215,7 +215,7 @@ async function assumeTargetRole(awsConfig: any): Promise<any> {
   });
 
   const result = await stsClient.send(command);
-  
+
   if (!result.Credentials) {
     throw new Error('Failed to assume AWS role - no credentials returned');
   }
@@ -330,11 +330,11 @@ async function scanECS(region: string, credentials: any, resourceTypes?: string[
   // Scan ECS Clusters
   if (!resourceTypes || resourceTypes.includes('AWS::ECS::Cluster')) {
     const clustersResult = await ecsClient.send(new ListClustersCommand({}));
-    
+
     if (clustersResult.clusterArns && clustersResult.clusterArns.length > 0) {
       const clusterDetails = await ecsClient.send(new DescribeClustersCommand({
         clusters: clustersResult.clusterArns,
-        include: ['CONFIGURATIONS', 'TAGS', 'CAPACITY_PROVIDERS', 'INSIGHTS']
+        include: ['CONFIGURATIONS', 'TAGS']
       }));
 
       clusterDetails.clusters?.forEach(cluster => {
@@ -344,7 +344,7 @@ async function scanECS(region: string, credentials: any, resourceTypes?: string[
           resourceName: cluster.clusterName,
           configuration: {
             ...cluster,
-            insights: cluster.configuration?.executeCommandConfiguration,
+            executeCommandConfiguration: cluster.configuration?.executeCommandConfiguration,
             capacityProviders: cluster.capacityProviders,
             defaultCapacityProviderStrategy: cluster.defaultCapacityProviderStrategy,
           },
@@ -357,7 +357,7 @@ async function scanECS(region: string, credentials: any, resourceTypes?: string[
   // Scan ECS Services
   if (!resourceTypes || resourceTypes.includes('AWS::ECS::Service')) {
     const clustersResult = await ecsClient.send(new ListClustersCommand({}));
-    
+
     if (clustersResult.clusterArns) {
       for (const clusterArn of clustersResult.clusterArns) {
         try {
@@ -500,11 +500,11 @@ async function scanS3(credentials: any, resourceTypes?: string[]): Promise<any[]
   const resources: any[] = [];
 
   const bucketsResult = await s3Client.send(new ListBucketsCommand({}));
-  
+
   if (bucketsResult.Buckets) {
     for (const bucket of bucketsResult.Buckets) {
       const bucketName = bucket.Name!;
-      
+
       try {
         // Get bucket encryption
         let encryption = null;
@@ -557,7 +557,7 @@ async function scanLambda(region: string, credentials: any, resourceTypes?: stri
   const resources: any[] = [];
 
   const functionsResult = await lambdaClient.send(new ListFunctionsCommand({}));
-  
+
   if (functionsResult.Functions) {
     for (const func of functionsResult.Functions) {
       try {
@@ -664,7 +664,7 @@ async function scanIAM(credentials: any, resourceTypes?: string[]): Promise<any[
   // Scan IAM roles
   if (!resourceTypes || resourceTypes.includes('AWS::IAM::Role')) {
     const rolesResult = await iamClient.send(new ListRolesCommand({}));
-    
+
     if (rolesResult.Roles) {
       for (const role of rolesResult.Roles) {
         try {
@@ -717,13 +717,13 @@ async function scanConfigService(region: string, credentials: any, resourceTypes
   try {
     // Use AWS Config to get a comprehensive view of resources
     const configQuery = `
-      SELECT 
+      SELECT
         resourceType,
         resourceId,
         resourceName,
         configuration,
         configurationItemStatus
-      WHERE 
+      WHERE
         configurationItemStatus = 'OK'
       ${resourceTypes ? `AND resourceType IN (${resourceTypes.map(t => `'${t}'`).join(',')})` : ''}
       LIMIT 1000
@@ -766,7 +766,7 @@ async function scanOrganizations(credentials: any, resourceTypes?: string[]): Pr
     if (!resourceTypes || resourceTypes.includes('AWS::Organizations::Organization')) {
       try {
         const orgResult = await orgClient.send(new DescribeOrganizationCommand({}));
-        
+
         if (orgResult.Organization) {
           const org = orgResult.Organization;
           resources.push({
@@ -792,7 +792,7 @@ async function scanOrganizations(credentials: any, resourceTypes?: string[]): Pr
     if (!resourceTypes || resourceTypes.includes('AWS::Organizations::Account')) {
       try {
         const accountsResult = await orgClient.send(new ListAccountsCommand({}));
-        
+
         if (accountsResult.Accounts) {
           for (const account of accountsResult.Accounts) {
             try {
@@ -836,7 +836,7 @@ async function scanOrganizations(credentials: any, resourceTypes?: string[]): Pr
     if (!resourceTypes || resourceTypes.includes('AWS::Organizations::OrganizationalUnit')) {
       try {
         const rootsResult = await orgClient.send(new ListRootsCommand({}));
-        
+
         if (rootsResult.Roots) {
           for (const root of rootsResult.Roots) {
             // Add root as a resource
@@ -867,7 +867,7 @@ async function scanOrganizations(credentials: any, resourceTypes?: string[]): Pr
         const policiesResult = await orgClient.send(new ListOrgPoliciesCommand({
           Filter: 'SERVICE_CONTROL_POLICY',
         }));
-        
+
         if (policiesResult.Policies) {
           for (const policy of policiesResult.Policies) {
             try {
@@ -948,21 +948,21 @@ async function scanSupport(credentials: any, resourceTypes?: string[]): Promise<
         const checksResult = await supportClient.send(new DescribeTrustedAdvisorChecksCommand({
           language: 'en',
         }));
-        
+
         if (checksResult.checks && checksResult.checks.length > 0) {
           // Business or Enterprise support plan detected
           let supportLevel = 'Business';
-          
+
           // Check for Enterprise-specific features by testing severity levels
           try {
             const severityResult = await supportClient.send(new DescribeSeverityLevelsCommand({
               language: 'en',
             }));
-            
+
             // Enterprise plans typically have more severity levels and faster response times
             if (severityResult.severityLevels && severityResult.severityLevels.length >= 4) {
-              const hasEnterprise = severityResult.severityLevels.some(level => 
-                level.name?.toLowerCase().includes('critical') && 
+              const hasEnterprise = severityResult.severityLevels.some(level =>
+                level.name?.toLowerCase().includes('critical') &&
                 level.name?.toLowerCase().includes('urgent')
               );
               if (hasEnterprise) {
@@ -1022,14 +1022,14 @@ async function scanSupport(credentials: any, resourceTypes?: string[]): Promise<
       } catch (trustedAdvisorError) {
         // If Trusted Advisor is not accessible, likely Basic or Developer support
         logger.debug('Trusted Advisor not accessible, checking for basic support', { error: trustedAdvisorError });
-        
+
         try {
           // Try to create a test case to determine support level
           // Note: We won't actually create a case, just check permissions
           const casesResult = await supportClient.send(new DescribeCasesCommand({
             maxResults: 1,
           }));
-          
+
           // If we can list cases, at least Developer support is enabled
           resources.push({
             resourceType: 'AWS::Support::Plan',

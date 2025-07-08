@@ -222,7 +222,7 @@ async function startDifferentialAnalysis(
     const createdBy = (event.requestContext.identity as any)?.claims?.sub || 'system';
 
     const finalResult: DifferentialAnalysisResult = {
-      ...analysisResult,
+      ...(analysisResult as DifferentialAnalysisResult),
       id: analysisId,
       tenantId,
       projectId,

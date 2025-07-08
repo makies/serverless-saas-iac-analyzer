@@ -18,6 +18,8 @@ import {
   DescribeComplianceByConfigRuleCommand,
   GetDiscoveredResourceCountsCommand,
   BatchGetResourceConfigCommand,
+  ResourceType,
+  ResourceKey,
 } from '@aws-sdk/client-config-service';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, UpdateCommand, QueryCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
@@ -371,7 +373,7 @@ async function discoverResourceType(
 
   do {
     const command = new ListDiscoveredResourcesCommand({
-      resourceType,
+      resourceType: resourceType as ResourceType,
       nextToken,
       limit: 100,
     });
@@ -405,7 +407,10 @@ async function getResourceConfigurations(
 
   try {
     const command = new BatchGetResourceConfigCommand({
-      resourceKeys: resourceIdentifiers,
+      resourceKeys: resourceIdentifiers.map(r => ({
+        resourceType: r.resourceType as ResourceType,
+        resourceId: r.resourceId,
+      })) as ResourceKey[],
     });
 
     const response = await configClient.send(command);
@@ -468,39 +473,48 @@ async function getResourceInventory(
   }
 
   try {
-    const queryCommand = new QueryCommand({
-      TableName: RESOURCE_INVENTORY_TABLE,
-      IndexName: 'TenantProjectIndex',
-      KeyConditionExpression: 'tenantId = :tenantId',
-      ExpressionAttributeValues: {
-        ':tenantId': tenantId,
-      },
-      Limit: limit,
-    });
-
-    // Add filters
+    // Build query parameters
+    const expressionAttributeValues: Record<string, any> = {
+      ':tenantId': tenantId,
+    };
+    const expressionAttributeNames: Record<string, string> = {};
     const filterExpressions = [];
+
     if (projectId) {
       filterExpressions.push('projectId = :projectId');
-      queryCommand.ExpressionAttributeValues![':projectId'] = projectId;
+      expressionAttributeValues[':projectId'] = projectId;
     }
     if (resourceType) {
       filterExpressions.push('resourceType = :resourceType');
-      queryCommand.ExpressionAttributeValues![':resourceType'] = resourceType;
+      expressionAttributeValues[':resourceType'] = resourceType;
     }
     if (accountId) {
       filterExpressions.push('accountId = :accountId');
-      queryCommand.ExpressionAttributeValues![':accountId'] = accountId;
+      expressionAttributeValues[':accountId'] = accountId;
     }
     if (region) {
       filterExpressions.push('#region = :region');
-      queryCommand.ExpressionAttributeNames = { '#region': 'region' };
-      queryCommand.ExpressionAttributeValues![':region'] = region;
+      expressionAttributeNames['#region'] = 'region';
+      expressionAttributeValues[':region'] = region;
+    }
+
+    const queryParams: any = {
+      TableName: RESOURCE_INVENTORY_TABLE,
+      IndexName: 'TenantProjectIndex',
+      KeyConditionExpression: 'tenantId = :tenantId',
+      ExpressionAttributeValues: expressionAttributeValues,
+      Limit: limit,
+    };
+
+    if (Object.keys(expressionAttributeNames).length > 0) {
+      queryParams.ExpressionAttributeNames = expressionAttributeNames;
     }
 
     if (filterExpressions.length > 0) {
-      queryCommand.FilterExpression = filterExpressions.join(' AND ');
+      queryParams.FilterExpression = filterExpressions.join(' AND ');
     }
+
+    const queryCommand = new QueryCommand(queryParams);
 
     const result = await dynamoClient.send(queryCommand);
 

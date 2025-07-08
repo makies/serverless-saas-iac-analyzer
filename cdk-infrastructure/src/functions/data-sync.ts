@@ -150,7 +150,7 @@ async function handleTenantCreated(tenantData: TenantEvent): Promise<void> {
   const amplifyTenant: AmplifyTenant = {
     id: tenantData.tenantId,
     name: tenantData.tenantName,
-    status: tenantData.status,
+    status: tenantData.status === 'ARCHIVED' ? 'INACTIVE' : tenantData.status,
     tier: tenantData.tier,
     settings: {
       allowClientAccess: sbtTenant.settings?.allowClientAccess || false,

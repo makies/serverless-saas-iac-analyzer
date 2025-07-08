@@ -357,7 +357,7 @@ async function discoverAccountRegionResources(
 
   // Generic resource discovery using Resource Groups API
   if (includeServices.includes('All') || includeServices.length === 0) {
-    await discoverAllResources(session, account.accountId, region, credentials, account.discoveryScope);
+    await discoverAllResources(session, account.accountId, region, account.discoveryScope, credentials);
   }
 }
 
@@ -782,8 +782,8 @@ async function discoverAllResources(
   session: DiscoverySession,
   accountId: string,
   region: string,
-  credentials?: any,
-  discoveryScope: any
+  discoveryScope: any,
+  credentials?: any
 ): Promise<void> {
   const resourceGroupsClient = new ResourceGroupsTaggingAPIClient({ region, credentials });
   
@@ -798,7 +798,7 @@ async function discoverAllResources(
           ResourceTypeFilters: discoveryScope.includeResourceTypes,
           TagFilters: discoveryScope.tagFilters ? Object.entries(discoveryScope.tagFilters).map(([key, value]) => ({
             Key: key,
-            Values: [value],
+            Values: [String(value)],
           })) : undefined,
         })
       );

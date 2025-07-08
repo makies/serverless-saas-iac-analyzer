@@ -12,7 +12,7 @@ import {
   ScanCommand,
   BatchGetCommand,
 } from '@aws-sdk/lib-dynamodb';
-import { CloudWatchClient, GetMetricStatisticsCommand } from '@aws-sdk/client-cloudwatch';
+import { CloudWatchClient, GetMetricStatisticsCommand, Statistic } from '@aws-sdk/client-cloudwatch';
 import { Logger } from '@aws-lambda-powertools/logger';
 import { Tracer } from '@aws-lambda-powertools/tracer';
 import { Metrics, MetricUnit } from '@aws-lambda-powertools/metrics';
@@ -293,7 +293,7 @@ async function getUsageMetrics(timeRange: string): Promise<DashboardMetrics['usa
   // Get CloudWatch metrics for API calls
   const apiCallsToday = await getCloudWatchMetric(
     'AWS/ApiGateway',
-    'Count',
+    'Sum' as Statistic,
     'CloudBPA-API',
     24 // hours
   );
@@ -352,14 +352,14 @@ async function getFrameworkMetrics(): Promise<DashboardMetrics['frameworks']> {
 async function getPerformanceMetrics(timeRange: string): Promise<DashboardMetrics['performance']> {
   const averageAnalysisTime = await getCloudWatchMetric(
     'CloudBPA/Analysis',
-    'Average',
+    'Average' as Statistic,
     'AnalysisDuration',
     getHoursForRange(timeRange)
   );
 
   const errorRate = await getCloudWatchMetric(
     'CloudBPA/Analysis',
-    'Average',
+    'Average' as Statistic,
     'ErrorRate',
     getHoursForRange(timeRange)
   );
@@ -578,7 +578,7 @@ async function getSystemHealthOverview(): Promise<APIGatewayProxyResult> {
 // Helper functions
 async function getCloudWatchMetric(
   namespace: string,
-  statistic: string,
+  statistic: Statistic,
   metricName: string,
   hours: number
 ): Promise<number> {

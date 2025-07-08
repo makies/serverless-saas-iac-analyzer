@@ -129,7 +129,7 @@ ${config.cognitoConfig.userPoolName}にご招待いたします。
     const cognitoTriggersFunction = new lambdaNodejs.NodejsFunction(this, 'CognitoTriggersFunction', {
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'handler',
-      entry: require('path').join(__dirname, '../src/functions/cognito-triggers.ts'),
+      entry: require('path').join(__dirname, '../../src/functions/cognito-triggers.ts'),
       timeout: cdk.Duration.seconds(30),
       memorySize: 512,
       environment: {

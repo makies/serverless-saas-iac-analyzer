@@ -115,10 +115,10 @@ export const handler: APIGatewayProxyHandler = async (
         result = await updateUser(pathParameters!.userId!, event, userTenantId, userRole);
         break;
       case 'DELETE /users/{userId}':
-        result = await deleteUser(pathParameters!.userId!, userTenantId, userRole);
+        result = await deleteUser(event, pathParameters!.userId!, userTenantId, userRole);
         break;
       case 'POST /users/{userId}/reset-password':
-        result = await resetUserPassword(pathParameters!.userId!, userTenantId, userRole);
+        result = await resetUserPassword(event, pathParameters!.userId!, userTenantId, userRole);
         break;
       case 'POST /users/{userId}/change-role':
         result = await changeUserRole(pathParameters!.userId!, event, userTenantId, userRole);
@@ -495,6 +495,7 @@ async function updateUser(
 }
 
 async function deleteUser(
+  event: APIGatewayProxyEvent,
   userId: string,
   userTenantId: string,
   userRole: string
@@ -555,6 +556,7 @@ async function deleteUser(
 }
 
 async function resetUserPassword(
+  event: APIGatewayProxyEvent,
   userId: string,
   userTenantId: string,
   userRole: string
